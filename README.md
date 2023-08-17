@@ -1,2 +1,2 @@
-# ari
-RPL ARI resources, see [the wiki](https://github.com/KTH-RPL/ari/wiki).
+# RPL ARI Resources
+See [the wiki](https://github.com/KTH-RPL/ari/wiki).
