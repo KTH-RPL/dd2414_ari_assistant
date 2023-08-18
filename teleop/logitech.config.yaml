@@ -1,0 +1,8 @@
+# Logitech Wireless Gamepad F710
+axis_linear: 3  # Forward/Back
+scale_linear: 0.4
+
+axis_angular: 0  # Left/Right
+scale_angular: 0.4
+
+enable_button: 4  # Keep this pressed or nothing is published 
