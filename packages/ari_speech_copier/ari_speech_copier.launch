@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+
+  <node name="ari_test_talking" pkg="ari_speech_copier" type="talking.py"/>
+
+</launch>
