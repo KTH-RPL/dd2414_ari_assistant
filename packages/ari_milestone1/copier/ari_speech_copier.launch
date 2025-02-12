@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<launch>
-
-  <node name="ari_test_talking" pkg="ari_milestone1" type="talking.py"/>
-
-</launch>
