@@ -16,6 +16,7 @@ class Talker(object):
         self.tts.wait_for_server()
         rospy.loginfo("RobotBase::Connected to TTS action client")
 
+        # Subsrcribe to speech topic
         self.speech_sub = rospy.Subscriber('/humans/voices/anonymous_speaker/speech', LiveSpeech, self.speech_cb)
         rospy.loginfo("RobotBase::Subscribed to " + self.speech_sub.resolved_name)
 

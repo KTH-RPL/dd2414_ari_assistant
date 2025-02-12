@@ -18,9 +18,11 @@ class Mapper(object):
         self.tts.wait_for_server()
         rospy.loginfo("RobotBase::Connected to TTS action client")
 
+        # Subsrcribe to speech topic
         self.speech_sub = rospy.Subscriber('/humans/voices/anonymous_speaker/speech', LiveSpeech, self.speech_cb)
         rospy.loginfo("RobotBase::Subscribed to " + self.speech_sub.resolved_name)
 
+        # Connect to mapping services
         rospy.wait_for_service('pal_navigation_sm')
         rospy.wait_for_service('/pal_map_manager/start_map')
         rospy.wait_for_service('/pal_map_manager/stop_map')
@@ -32,10 +34,22 @@ class Mapper(object):
         
 
     def start_mapping(self):
+        # Announce start of mapping
         self.talk("Starting mapping")
 
+        # Set navigation mode to mapping
         request = AcknowledgmentRequest()
         request.input = 'MAP'
+        response = self.navigation_mode(request)
+        
+
+    def end_mapping(self):
+        # Announce end of mapping
+        self.talk("Stopping mapping")
+
+        # Set navigation mode back to localisation
+        request = AcknowledgmentRequest()
+        request.input = 'LOC'
         response = self.navigation_mode(request)
 
 
@@ -49,30 +63,16 @@ class Mapper(object):
 
         # Send the goal and wait
         self.tts.send_goal_and_wait(goal)
-        
-
-    def end_mapping(self):
-        self.talk("Stopping mapping")
-
-        request = AcknowledgmentRequest()
-        request.input = 'LOC'
-        response = self.navigation_mode(request)
-
-        request = AcknowledgmentRequest()
-        request.input = '2025-02-11_135553'
-        response = self.change_map(request)
-
 
         
     def speech_cb(self, data):
 
-        # When speech is published, say the text of the speech
+        # When speech is published, either start or end mapping
         if data.final == "stop mapping":
             self.end_mapping()
 
         if data.final == "start mapping":
             self.start_mapping()
-            
 
 
 if __name__ == '__main__':
@@ -86,4 +86,3 @@ if __name__ == '__main__':
         
     except rospy.ROSInterruptException:
         pass
-
