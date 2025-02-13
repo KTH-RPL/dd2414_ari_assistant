@@ -1,0 +1,24 @@
+<launch>
+  <arg name="joy_dev" default="/dev/input/js0" />
+  <arg name="joy_out" default="/joy" />
+  <arg name="conversion_out" default="/rviz_joy_vel" />
+
+
+  <!--Note to extract data from joystick-->
+  <node pkg="joy" type="joy_node" name="joy_node">
+    <!--Input from joystick node-->
+    <param name="dev" value="$(arg joy_dev)" />
+  </node>
+
+  <!--Mapping joy twist messages to cmd_vel-->
+  <node pkg="joystick_conversion" type="joy_conversion_node" name="joy_conversion" >
+    <!--Output from joystick node-->
+    <param name="joy_out" value="$(arg joy_out)" />
+    <!--Output from this node-->
+    <param name="conversion_out" value="$(arg conversion_out)" />
+
+    <!--Timeout in sec before warning pops up, set to 0 if dont want warnigns to show-->
+    <param name="timeout" type="int" value="30" />
+  </node>
+
+</launch>
