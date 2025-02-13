@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<launch>
-
-  <node name="ari_enable_mapping" pkg="dd2414_navigation" type="mapping.py"/>
-
-</launch>

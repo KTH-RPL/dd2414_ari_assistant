@@ -36,16 +36,18 @@ class Mapper(object):
     def start_mapping(self):
         # Announce start of mapping
         self.talk("Starting mapping")
+        print("Sending request to change navigation mode to mapping")
 
         # Set navigation mode to mapping
         request = AcknowledgmentRequest()
         request.input = 'MAP'
         response = self.navigation_mode(request)
-        
+
 
     def end_mapping(self):
         # Announce end of mapping
         self.talk("Stopping mapping")
+        print("Sending request to change navigation mode to localisation")
 
         # Set navigation mode back to localisation
         request = AcknowledgmentRequest()
@@ -66,7 +68,6 @@ class Mapper(object):
 
         
     def speech_cb(self, data):
-
         # When speech is published, either start or end mapping
         if data.final == "stop mapping":
             self.end_mapping()
