@@ -17,8 +17,6 @@ def nav_move_base(req_x, req_y):
     goal.target_pose.pose.position.y = req_y
     goal.target_pose.pose.orientation.w = 1.0
 
-    print(req_x)
-
     rospy.loginfo("Sending goal")
     move_client.send_goal(goal)
     wait = move_client.wait_for_result()
