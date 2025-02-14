@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>joystick_conversion</name>
+  <name>dd2414_joystick</name>
   <version>0.0.0</version>
-  <description>The joystick_conversion package</description>
+  <description>The dd2414_joystick package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
@@ -19,7 +19,7 @@
   <!-- Url tags are optional, but multiple are allowed, one per tag -->
   <!-- Optional attribute type can be: website, bugtracker, or repository -->
   <!-- Example: -->
-  <!-- <url type="website">http://wiki.ros.org/joystick_conversion</url> -->
+  <!-- <url type="website">http://wiki.ros.org/dd2414_joystick</url> -->
 
 
   <!-- Author tags are optional, multiple are allowed, one per tag -->

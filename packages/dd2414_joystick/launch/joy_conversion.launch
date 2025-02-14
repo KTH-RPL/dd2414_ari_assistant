@@ -11,7 +11,7 @@
   </node>
 
   <!--Mapping joy twist messages to cmd_vel-->
-  <node pkg="joystick_conversion" type="joy_conversion_node" name="joy_conversion" >
+  <node pkg="dd2414_joystick" type="joy_conversion_node" name="joy_conversion" >
     <!--Output from joystick node-->
     <param name="joy_out" value="$(arg joy_out)" />
     <!--Output from this node-->
