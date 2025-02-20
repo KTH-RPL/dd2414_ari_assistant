@@ -1,0 +1,10 @@
+<launch>
+
+    <!--Joystick control-->
+    <include file="$(find dd2414_joystick)/launch/joy_conversion.launch">
+    </include>
+
+    <!-- Mapping Control -->
+    <include file="$(find dd2414_mapping)/launch/ari_mapper.launch">
+    </include>
+</launch>
