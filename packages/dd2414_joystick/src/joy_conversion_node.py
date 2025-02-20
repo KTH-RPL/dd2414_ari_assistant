@@ -36,16 +36,29 @@ class JoyConversion:
         self.cmd_vel_pub.publish(cmd_vel)
     
     def checJoystickTimeout(self):
-        if rospy.Time.now().to_sec() - self.last_time > self.timeout and self.timeout != 0.0:
+        now = rospy.Time.now().to_sec()
+
+        if now - self.last_time > self.timeout and self.timeout != 0.0:
             self.cmd_vel_pub.publish(Twist())
             rospy.logwarn("Lost connection to the 'joy' topic. Stopping Robot")
         else:
             self.cmd_vel_pub.publish(self.last_msg)
+    
+    def shutdown(self):
+        rospy.loginfo("Shutting Down node")
+        self.cmd_vel_pub.publish(Twist)
+    
+
 
 if __name__ == '__main__':
     try:
         rospy.init_node("joy_convserion_node")
         node = JoyConversion()
-        rospy.spin()
+        rate = rospy.Rate(10) #10Hz
+        while not rospy.is_shutdown():
+            node.checJoystickTimeout()
+            rate.sleep()
+
+        node.shutdown()
     except rospy.ROSInterruptException:
         rospy.loginfo("Joy Conversion Ended")

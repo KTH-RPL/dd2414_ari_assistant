@@ -18,7 +18,7 @@
     <param name="conversion_out" value="$(arg conversion_out)" />
 
     <!--Timeout in sec before warning pops up, set to 0 if dont want warnigns to show-->
-    <param name="timeout" type="int" value="30" />
+    <param name="timeout" type="int" value="20" />
   </node>
 
 </launch>
