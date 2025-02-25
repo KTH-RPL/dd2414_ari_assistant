@@ -14,6 +14,7 @@ look_at_pub = rospy.Publisher("/look_at", PointStamped, queue_size=1)
 
 r = rospy.Rate(10)
 
+
 while not rospy.is_shutdown():
     if len(hri.faces) > 0:  # Check if faces are detected
         face = list(hri.faces.values())[0]  # Select the first detected face
@@ -33,3 +34,5 @@ while not rospy.is_shutdown():
         print("No faces detected")
     
     r.sleep()
+
+

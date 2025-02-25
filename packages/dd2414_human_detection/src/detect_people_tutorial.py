@@ -83,7 +83,7 @@ class BodyOrientationListener:
 
             # detected through the body detection pipeline
 
-            bodies = self.hri_listener.body.items()
+            bodies = self.hri_listener.bodies.items()
 
 
             # the list of the ids representing

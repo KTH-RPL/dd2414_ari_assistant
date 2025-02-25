@@ -55,7 +55,8 @@
   <depend>hri_msgs</depend>
   <depend>pal_interaction_msgs</depend>
   <depend>geometry_msgs</depend>
-
+  <depend>sensor_msgs</depend>
+  <depend>cv_bridge</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
