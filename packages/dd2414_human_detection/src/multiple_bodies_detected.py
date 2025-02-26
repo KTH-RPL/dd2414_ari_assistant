@@ -2,11 +2,10 @@
 import rospy
 from sensor_msgs.msg import Image
 from hri_msgs.msg import IdsList, NormalizedRegionOfInterest2D
-import cv2
 from cv_bridge import CvBridge
-import numpy as np
-import os
-import torch  # Import torch for YOLOv5
+import random
+import string
+from ultralytics import YOLO
 
 class HumanDetectionNode:
     def __init__(self):
@@ -14,74 +13,100 @@ class HumanDetectionNode:
 
         self.bridge = CvBridge()
 
+        # ROS Parameters
+        self.conf_threshold = rospy.get_param("~conf_threshold", 0.25)
+        self.nms_threshold = rospy.get_param("~nms_threshold", 0.45)
+
         # Subscribe to camera image
-        self.image_sub = rospy.Subscriber('/image', Image, self.image_callback)
+        self.image_sub = rospy.Subscriber('/head_front_camera/color/image_raw', Image, self.image_callback)
 
         # Publishers
-        self.body_ids_pub = rospy.Publisher('/humans/bodies/tracked', IdsList, queue_size=10)
-
-        # Load YOLOv5 model
-        YOLO_PATH = '/home/laura/catkin_ws/src/dd2414/dd2414_human_detection/src/yolov5/yolov5s.pt'
-
+        self.body_ids_pub = rospy.Publisher("/humans/bodies/tracked", IdsList, queue_size=1)
         
-        if not os.path.isfile(YOLO_PATH):
-            rospy.logerr(f"YOLO file not found at: {YOLO_PATH}")
-        else:
-            rospy.loginfo(f"YOLO file found at: {YOLO_PATH}")
 
-        # Load the YOLOv5 model using PyTorch
-        self.net = torch.hub.load('ultralytics/yolov5', 'custom', path=YOLO_PATH, force_reload=True)
-        self.conf_threshold = 0.5  # Confidence threshold
-        self.nms_threshold = 0.4     # Non-maximum suppression threshold
+        # Load YOLOv8 model
+        self.model = YOLO("yolov8n.pt")
+        
+        # Dictionary to store track ID mappings
+        self.track_id_mapping = {}
+
+    
+    def generate_random_id(self, length=5):
+        """ Generate a random 5-letter ID. """
+        return ''.join(random.choices(string.ascii_lowercase, k=length))
 
     def image_callback(self, msg):
         cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
-
-        # Detect humans using YOLOv5
         detected_bodies = self.detect_bodies(cv_image)
+        rospy.loginfo(f"Raw detections: {detected_bodies}")
 
-        # Publish detected body IDs
+        # Prepare messages
         body_ids_msg = IdsList()
-        for i, (x_min, y_min, x_max, y_max) in enumerate(detected_bodies):
-            body_id = f"body_{i}"
-            body_ids_msg.ids.append(body_id)
+        roi_msgs = []
+        cropped_msgs = []
+
+        # Publish detected bodies
+        for (x_min, y_min, x_max, y_max, track_id) in detected_bodies:
+            # Generate a unique ID for each track ID if not already mapped
+            if track_id not in self.track_id_mapping:
+                self.track_id_mapping[track_id] = self.generate_random_id()  # Generate ID if new
+            body_id = self.track_id_mapping[track_id]
+
+            if body_id not in body_ids_msg.ids:
+                body_ids_msg.ids.append(body_id)
 
             # Create ROI message
             roi_msg = NormalizedRegionOfInterest2D()
-            roi_msg.x_min = x_min / cv_image.shape[1]
-            roi_msg.y_min = y_min / cv_image.shape[0]
-            roi_msg.x_max = x_max / cv_image.shape[1]
-            roi_msg.y_max = y_max / cv_image.shape[0]
+            roi_msg.xmin = x_min / cv_image.shape[1]
+            roi_msg.ymin = y_min / cv_image.shape[0]
+            roi_msg.xmax = x_max / cv_image.shape[1]
+            roi_msg.ymax = y_max / cv_image.shape[0]
+            roi_msgs.append((body_id, roi_msg))
 
             # Crop detected body
             cropped_image = cv_image[y_min:y_max, x_min:x_max]
             cropped_msg = self.bridge.cv2_to_imgmsg(cropped_image, "bgr8")
+            cropped_msgs.append((body_id, cropped_msg))
 
-            # Create dynamic topic names
-            roi_topic = f'/humans/bodies/{body_id}/roi'
-            cropped_topic = f'/humans/bodies/{body_id}/cropped'
-
-            # Dynamically create publishers
-            roi_pub = rospy.Publisher(roi_topic, NormalizedRegionOfInterest2D, queue_size=10)
-            cropped_img_pub = rospy.Publisher(cropped_topic, Image, queue_size=10)
-
-            # Publish messages
-            roi_pub.publish(roi_msg)
-            cropped_img_pub.publish(cropped_msg)
-
+        # Publish the list of detected body IDs
+        rospy.loginfo(f"Detected body IDs: {body_ids_msg.ids}")
         self.body_ids_pub.publish(body_ids_msg)
 
+        # Publish ROIs and cropped images
+        self.publish_detections(roi_msgs, cropped_msgs)
+
+    def publish_detections(self, roi_msgs, cropped_msgs):
+        """ Publish detected ROIs and cropped images. """
+        for body_id, roi_msg in roi_msgs:
+            topic = f"/humans/bodies/{body_id}/roi"
+            roi_pub = rospy.Publisher(topic, NormalizedRegionOfInterest2D, queue_size=10)
+            roi_pub.publish(roi_msg)
+
+        for body_id, cropped_msg in cropped_msgs:
+            topic = f"/humans/bodies/{body_id}/cropped"
+            cropped_pub = rospy.Publisher(topic, Image, queue_size=10)
+            cropped_pub.publish(cropped_msg)
+
+        rospy.loginfo("Published ROI and cropped images for detected bodies.")
+
     def detect_bodies(self, image):
-        results = self.net(image)
-        detections = results.xyxy[0]  # Get detections in (x1, y1, x2, y2, confidence, class) format
+        """ Run YOLOv8 tracking and return detected bounding boxes with track IDs. """
+        results = self.model.track(image, persist=True, conf=0.25, iou=0.2, classes=[0],show=True, tracker="/home/laura/catkin_ws/src/dd2414/dd2414_human_detection/src/custom_tracker.yaml")
+        detected_bodies = []
+        if results[0].boxes is not None:
+            for box in results[0].boxes.data.tolist():
+                if len(box) >= 7:  # Ensure we have a track ID
+                    print(box)
+                    x_min, y_min, x_max, y_max, track_id, conf, cls = box[:7]
+                    x_min, y_min, x_max, y_max = map(int, [x_min, y_min, x_max, y_max])
 
-        boxes = []
-        for *box, conf, cls in detections:
-            if conf > self.conf_threshold and int(cls) == 0:  # Class ID 0 is 'person'
-                x_min, y_min, x_max, y_max = map(int, box)
-                boxes.append([x_min, y_min, x_max, y_max])
+                    print(track_id)
+                    print(conf)
+                    if conf > self.conf_threshold and int(cls) == 0:  # Class ID 0 is 'person'
+                        detected_bodies.append((x_min, y_min, x_max, y_max, track_id))
+        
+        return detected_bodies
 
-        return boxes
 
 def main():
     node = HumanDetectionNode()
