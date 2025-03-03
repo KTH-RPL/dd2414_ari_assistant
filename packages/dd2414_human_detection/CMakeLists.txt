@@ -163,16 +163,12 @@ include_directories(
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-  catkin_install_python(PROGRAMS src/detect_people_tutorial.py src/look_at_person.py src/multiple_bodies_detected.py
+  catkin_install_python(PROGRAMS src/detect_people_tutorial.py src/look_at_person.py src/multiple_bodies_detected.py src/face_recognition_node.py
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 #   scripts/my_python_script
 #   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
  )
-## Install YOLO files
-install(DIRECTORY src/yolov5/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/yolov5
-  FILES_MATCHING PATTERN "*.pt"  # Include weights file
-)
+
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
 # install(TARGETS ${PROJECT_NAME}_node
