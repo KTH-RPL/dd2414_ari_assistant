@@ -15,7 +15,6 @@ class HumanDetectionNode:
 
         # ROS Parameters
         self.conf_threshold = rospy.get_param("~conf_threshold", 0.25)
-        self.nms_threshold = rospy.get_param("~nms_threshold", 0.45)
 
         # Subscribe to camera image
         self.image_sub = rospy.Subscriber('/head_front_camera/color/image_raw', Image, self.image_callback)
@@ -91,7 +90,7 @@ class HumanDetectionNode:
 
     def detect_bodies(self, image):
         """ Run YOLOv8 tracking and return detected bounding boxes with track IDs. """
-        results = self.model.track(image, persist=True, conf=0.25, iou=0.2, classes=[0],show=True, tracker="/home/laura/catkin_ws/src/dd2414/dd2414_human_detection/src/custom_tracker.yaml")
+        results = self.model.track(image, persist=True, conf=0.25, iou=0.2, classes=[0],show=True)
         detected_bodies = []
         if results[0].boxes is not None:
             for box in results[0].boxes.data.tolist():
