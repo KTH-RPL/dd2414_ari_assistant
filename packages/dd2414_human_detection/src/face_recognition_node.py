@@ -69,7 +69,7 @@ class FaceRecognitionNode:
 
 
     def face_image_callback(self, msg, face_id):
-        """Process the received aligned face image and associate a name if provided."""
+        """Process the received aligned face image. Save it if it's a new one."""
         cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
         face_encodings = face_recognition.face_encodings(cv_image)
         
@@ -79,12 +79,14 @@ class FaceRecognitionNode:
             
             if match_id:
                 rospy.loginfo(f"Recognized face {face_id} as {match_id}")
+                self.current_id = match_id
             else:
-                # Ask for a name if it's available
-                # name = self.get_face_name(face_id)
                 name = None
                 new_id = self.save_new_face(face_id, encoding, cv_image, name)
                 rospy.loginfo(f"Saved new face {face_id} as {new_id} (Name: {name})")
+                self.current_id = new_id
+            
+            
         
     def find_matching_face(self, encoding):
         """Find the closest match in the database."""
@@ -111,13 +113,19 @@ class FaceRecognitionNode:
         cv2.imwrite(face_path, image)
         
         return new_id
-    
-    def get_face_name(self, face_id):
-        """Simulate getting the name for the face if provided."""
-        # In real scenarios, this could be done by querying an external source or user input
-        # Here we use a simple logic for testing
-        name = input(f"Enter name for face {face_id} (or press Enter to skip): ")
-        return name if name else "Unknown"
+
+
+        def add_name_to_face(self, name):
+            """Assign a name to the currently seen face ID."""
+            face_id = self.current_id
+            if face_id:s
+                data = self.load_known_faces()
+                index = data["ids"].index(face_id)
+                data["names"][index] = name
+                self.save_known_faces(data)
+                rospy.loginfo(f"Assigned name {name} to face ID {face_id}")
+            else:
+                rospy.logwarn("No recognized face to assign a name.")
 
 if __name__ == '__main__':
     node = FaceRecognitionNode()
