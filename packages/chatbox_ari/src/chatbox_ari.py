@@ -29,23 +29,21 @@ class ChatboxARI:
         self.system_prompt = "You are a office assistant robot called ARI (not just an AI). Be concise and helpful, give short answers."
 
         # Subscribe to ASR topic
-        #self.asr_sub = rospy.Subscriber('/humans/voices/anonymous_speaker/speech',LiveSpeech,self.asr_result)
+        self.asr_sub = rospy.Subscriber('/humans/voices/anonymous_speaker/speech',LiveSpeech,self.asr_result)
 
         # Set up PAL Robotics TTS
-        #self.tts_client = SimpleActionClient("/tts", TtsAction)
-        #self.tts_client.wait_for_server()
+        self.tts_client = SimpleActionClient("/tts", TtsAction)
+        self.tts_client.wait_for_server()
 
         rospy.loginfo("OLLAMA ARI node ready!")
-        self.run()
+        #self.run()
 
     # For testing porpuses
-    def run(self):
-        user_input = ""
-        while user_input != "stop":
-            user_input = input("Insert sentence: ")
-            self.asr_result(user_input)
-
-
+    #def run(self):
+    #    user_input = ""
+    #    while user_input != "stop":
+    #        user_input = input("Insert sentence: ")
+    #        self.asr_result(user_input)
 
     def asr_result(self, msg):
         """ Recognize speech. """
