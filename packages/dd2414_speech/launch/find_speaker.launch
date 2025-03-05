@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+
+  <node name="ari_test_direction" pkg="dd2414_speech" type="find_speaker.py"/>
+  <node name="ari_look_at_speaker" pkg="dd2414_speech" type="detect_people.py"/>
+
+</launch>
