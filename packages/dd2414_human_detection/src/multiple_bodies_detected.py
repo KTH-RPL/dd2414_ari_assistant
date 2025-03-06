@@ -5,6 +5,7 @@ from hri_msgs.msg import IdsList, NormalizedRegionOfInterest2D
 from cv_bridge import CvBridge
 import random
 import string
+import cv2
 from ultralytics import YOLO
 
 class HumanDetectionNode:
@@ -12,31 +13,42 @@ class HumanDetectionNode:
         rospy.init_node('human_detection_node', anonymous=True)
 
         self.bridge = CvBridge()
+        self.frame_counter = 0  # Add a frame counter
 
         # ROS Parameters
         self.conf_threshold = rospy.get_param("~conf_threshold", 0.25)
 
         # Subscribe to camera image
-        self.image_sub = rospy.Subscriber('/head_front_camera/color/image_raw', Image, self.image_callback)
+        self.image_sub = rospy.Subscriber('/head_front_camera/color/image_raw', Image, self.image_callback, queue_size=1)
 
         # Publishers
         self.body_ids_pub = rospy.Publisher("/humans/bodies/tracked", IdsList, queue_size=1)
-        
 
         # Load YOLOv8 model
         self.model = YOLO("yolov8n.pt")
-        
+
         # Dictionary to store track ID mappings
         self.track_id_mapping = {}
 
-    
     def generate_random_id(self, length=5):
         """ Generate a random 5-letter ID. """
         return ''.join(random.choices(string.ascii_lowercase, k=length))
 
     def image_callback(self, msg):
+        #rospy.loginfo("Image arrives at time stamp: " + rospy.Time.now())
+        self.frame_counter += 1
+
+        # Skip every 2nd frame (frame skipping)
+        #if self.frame_counter % 10 != 0:
+         #   return  # Skip this frame
+
         cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
-        detected_bodies = self.detect_bodies(cv_image)
+        
+        # Resize image for faster processing (e.g., 640x480)
+        cv_image_resized = cv2.resize(cv_image, (640, 480))
+
+        # Detect bodies in the resized image
+        detected_bodies = self.detect_bodies(cv_image_resized)
         rospy.loginfo(f"Raw detections: {detected_bodies}")
 
         # Prepare messages
@@ -72,16 +84,19 @@ class HumanDetectionNode:
         self.body_ids_pub.publish(body_ids_msg)
 
         # Publish ROIs and cropped images
+        #rospy.loginfo("Image arrives at time stamp: " + rospy.Time.now())
         self.publish_detections(roi_msgs, cropped_msgs)
 
     def publish_detections(self, roi_msgs, cropped_msgs):
         """ Publish detected ROIs and cropped images. """
         for body_id, roi_msg in roi_msgs:
+            roi_msg.header.stamp = rospy.Time.now()
             topic = f"/humans/bodies/{body_id}/roi"
             roi_pub = rospy.Publisher(topic, NormalizedRegionOfInterest2D, queue_size=10)
             roi_pub.publish(roi_msg)
 
         for body_id, cropped_msg in cropped_msgs:
+            cropped_msg.header.stamp = rospy.Time.now()
             topic = f"/humans/bodies/{body_id}/cropped"
             cropped_pub = rospy.Publisher(topic, Image, queue_size=10)
             cropped_pub.publish(cropped_msg)
@@ -90,7 +105,7 @@ class HumanDetectionNode:
 
     def detect_bodies(self, image):
         """ Run YOLOv8 tracking and return detected bounding boxes with track IDs. """
-        results = self.model.track(image, persist=True, conf=0.25, iou=0.2, classes=[0],show=True)
+        results = self.model.track(image, persist=True, conf=0.25, iou=0.2, classes=[0], show=False)
         detected_bodies = []
         if results[0].boxes is not None:
             for box in results[0].boxes.data.tolist():
