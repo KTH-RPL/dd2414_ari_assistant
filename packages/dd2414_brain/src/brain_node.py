@@ -39,15 +39,15 @@ class ARI:
             self.current_state = "Busy"
             self.last_result = self.action_dict[self.current_intent]()
 
-        elif self.current_state == "Busy" and self.last_result == "Working":
+        elif self.current_state == "Busy" and self.last_result == "Working": #If robot is Working on the task at hand call the function to ask for an update
             self.last_result = self.action_dict[self.current_intent]()
 
-        elif self.current_state == "Busy" and self.last_result == "Done":
+        elif self.current_state == "Busy" and self.last_result == "Done": #If the robot just recieved a Done result from the action it was performing; we could skip this state transition to have it directly go into idle
             self.current_state = "Success"
 
-        elif self.current_state == "Success" and self.last_result == "Done":
+        elif self.current_state == "Success" and self.last_result == "Done": #Its just the next state after success
             self.current_state = "Idle"
-            self.idle()
+            self.idle() #Take any actions needed for it to be idling
 
         rospy.loginfo("State: "+ self.current_state + " | Current Action: " + self.current_intent + " | Result: " + self.last_result + " | Intent: " + intent)
     
