@@ -9,6 +9,7 @@ project(dd2414_follow_user)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   actionlib
+  actionlib_msgs
   geometry_msgs
   hri_msgs
   move_base_msgs
@@ -68,17 +69,15 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate actions in the 'action' folder
-# add_action_files(
-#   FILES
-#   Action1.action
-#   Action2.action
-# )
+#add_action_files(
+#  DIRECTORY action
+#  FILES Follow.action
+#)
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   geometry_msgs#   hri_msgs#   move_base_msgs#   std_msgs
-# )
+#generate_messages(
+#  DEPENDENCIES actionlib_msgs std_msgs
+#)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -112,7 +111,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES dd2414_follow_user
-  CATKIN_DEPENDS actionlib geometry_msgs hri_msgs move_base_msgs pyhri rospy std_msgs tf tf2_ros trajectory_msgs control_msgs
+  CATKIN_DEPENDS actionlib actionlib_msgs geometry_msgs hri_msgs move_base_msgs pyhri rospy std_msgs tf tf2_ros trajectory_msgs control_msgs
 #  DEPENDS system_lib
 )
 

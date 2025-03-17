@@ -127,11 +127,35 @@ class ARIHeadFollower:
         self.look_at_goal = rospy.Publisher("/head_controller/point_head_action/goal",PointHeadActionGoal,queue_size=1)
         self.head_pub = rospy.Publisher('/head_controller/follow_joint_trajectory/goal', FollowJointTrajectoryActionGoal, queue_size=1)
 
+        self.asr_sub      = rospy.Subscriber('/humans/voices/anonymous_speaker/speech',LiveSpeech, self.asr_result)
+        self.tts_client   = SimpleActionClient("/tts", TtsAction)
+        self.tts_client.wait_for_server()
+        self.language = "en_US"
+
         # Joint limits
         self.head_1_min, self.head_1_max = -1.2, 1.2
         self.head_2_min, self.head_2_max = -0.2, 0.4
 
-        #rospy.sleep(1)  # Wait for publishers to be ready
+    def asr_result(self,msg):
+        sentence = msg.final
+        rospy.loginfo(f"Understood sentence: {sentence}")
+        
+        if sentence.lower() == "stop":
+            self.stop = True
+            rospy.loginfo("Stoping Following behavior")
+            self.tts_output("Stopping Follow User behavior")
+        
+        if sentence.lower() == "follow user":
+            rospy.loginfo("Starting Following behavior")
+            self.tts_output("Starting Follow User behavior")
+            self.stop = False
+
+    def tts_output(self,answer):
+        self.tts_client.cancel_goal()
+        goal = TtsGoal()
+        goal.rawtext.lang_id = self.language
+        goal.rawtext.text = str(answer)
+        self.tts_client.send_goal_and_wait(goal)
 
     def map_range(self, value, in_min, in_max, out_min, out_max):
         """ Maps a value from one range to another """
@@ -209,7 +233,7 @@ class ARIHeadFollower:
 
     def track_user(self):
 
-        while not rospy.is_shutdown():
+        while not rospy.is_shutdown() and not self.stop:
             if len(self.hri_listener.bodies) > 0: # are bodies detected?
                 try:
 
@@ -231,7 +255,7 @@ class ARIHeadFollower:
 
                         head_goal = PointHeadActionGoal()
                         head_goal.goal.target.header.frame_id = "base_link"
-                        point = Point(x=t_bodies[0], y=t_bodies[1], z=t_bodies[2])
+                        point = Point(x=t_bodies[0], y=t_bodies[1], z=(t_bodies[2]-0.1))
                         head_goal.goal.pointing_axis.x = 1.0
                         head_goal.goal.pointing_axis.x = 0.0
                         head_goal.goal.pointing_axis.x = 0.0
@@ -279,7 +303,6 @@ class ARIHeadFollower:
 
                     else:
                         self.approach(bodies.frame)
-                    #rospy.loginfo(f"Moving Head -> head_1: {head_1_pos}, head_2: {head_2_pos}")
 
                 except Exception as e:
                     rospy.logwarn(f"Could not transform: {e}")
