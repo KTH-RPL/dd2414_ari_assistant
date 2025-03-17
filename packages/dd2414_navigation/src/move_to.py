@@ -3,9 +3,9 @@
 import rospy
 
 import actionlib
-import dd2414_navigation.msg as brain
+import dd2414_brain_v2.msg as brain
+
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
-from actionlib_msgs.msg import GoalStatus
 
 class StatusUpdate:
     _feedback = brain.BrainActionFeedback()
@@ -42,7 +42,7 @@ class StatusUpdate:
             status = self.node.action(goal)
             if status == "Success":
                 self._result.result = status
-                rospy.loginfo("Action Server " + self._action_name + " Succeded.")
+                rospy.loginfo("Action Server " + self._action_name + " Succeeded.")
                 self._as.set_succeeded(self._result)
             else:
                 self._result.result = "Failure"
@@ -54,16 +54,22 @@ class MoveBase:
     def __init__(self):
         self.move_client = actionlib.SimpleActionClient('/move_base', MoveBaseAction)
         self.location_dict = {"desk" : (1.0     , 1.0),
-                              "table" :(20.0    , 20.0)}
+                              "table" :(0.0    , 0.0)}
         
     def action(self,goal):
         position = self.location_dict[goal.goal]
         result = self.nav_move_base(position[0],position[1])
         return result
 
-    def preempted():
+    def preempted(self):
         pass
     
+#    def cb_done (self,status,result):
+#        pass
+#    def cb_feedback(self,feedback):
+#        pass
+#    def cb_active(self):
+#        pass
     def nav_move_base(self,req_x, req_y):
         self.move_client.wait_for_server()
         rospy.loginfo("Move base client ready")
@@ -79,17 +85,19 @@ class MoveBase:
         self.move_client.send_goal(goal)
         timeout = rospy.Duration(20)
         wait = self.move_client.wait_for_result(timeout)
-        result = self.move_client.get_result()
-        rospy.loginfo(wait)
-        rospy.loginfo(result)
-        if result == 2:
+        status = self.move_client.get_state()
+        #result = self.move_client.get_result()
+        #rospy.loginfo(wait)
+        #rospy.loginfo(status)
+        #rospy.loginfo(result)
+        if status == 3:
             return "Success"
-        elif result == 0:
+        elif status == 0:
             return "Working"
         else:
             return "Failure"
 
 if __name__ == '__main__':
-    rospy.init_node('nav_move_base_client')
+    rospy.init_node('nav_move_base_server')
     server = StatusUpdate(rospy.get_name())
     rospy.spin()
