@@ -5,6 +5,7 @@ import cv2
 import face_recognition
 from sensor_msgs.msg import Image
 from hri_msgs.msg import IdsList
+from pyhri import HRIListener
 from cv_bridge import CvBridge
 import json
 import numpy as np
@@ -13,6 +14,7 @@ class FaceRecognitionNode:
     def __init__(self):
         rospy.init_node('face_recognition_node', anonymous=True)
         self.bridge = CvBridge()
+        self.hri_listener = HRIListener()
         
         # Paths for saving data
         self.database_path = os.path.dirname(__file__)
@@ -34,7 +36,7 @@ class FaceRecognitionNode:
                 try:
                     data = json.load(f)
                     rospy.loginfo("Loaded face database successfully.")
-                    return data['encodings'], data['ids'], data['names']
+                    return data['encodings'], data['ids'], data['names'], data['locations']
                 except json.JSONDecodeError as e:
                     rospy.logerr(f"Error decoding JSON: {e}")
         else:
@@ -49,6 +51,7 @@ class FaceRecognitionNode:
             'encodings': [encoding.tolist() for encoding in self.known_face_encodings],  # Convert ndarray to list
             'ids': self.known_face_ids,
             'names': self.known_face_names
+            'locations' : self.known_face_locations
         }
 
         try:
@@ -88,6 +91,9 @@ class FaceRecognitionNode:
                 new_id = self.save_new_face(face_id, encoding, cv_image, name)
                 rospy.loginfo(f"Saved new face {face_id} as {new_id} (Name: {name})")
                 self.current_id = new_id
+            
+            # Save latest known location if you know the name
+            self.add_location_to_face(face_id)
             
             
         
@@ -130,17 +136,38 @@ class FaceRecognitionNode:
         else:
             rospy.logwarn("No recognized face to assign a name.")
 
-    def add_location_to_face(self, location):
+
+    def add_location_to_face(self, temporal_face_id):
         """Assign a last seen location in the map to the currently seen face ID."""
         face_id = self.current_id
         if face_id:
-            data = self.load_known_faces()
-            index = data["ids"].index(face_id)
-            data["location"][index] = location
-            self.save_known_faces(data)
-            rospy.loginfo(f"Assigned location {location} to face ID {face_id}")
+            self.data = self.load_known_faces()
+            self.index = self.data["ids"].index(face_id)
+            self.data["name"][self.index] = name
+
+            # Match temporal face ID given by ARI to the body ID
+            body_id = None
+            for id, person in self.hri_listener.tracked_persons.items():
+                if id == temporal_face_id:
+                    body_id = person.body_id
+                    break
+
+            # If we know the name and the body id, get the location of the body and save it
+            if name and body_id:
+                topic_name = f"/humans/bodies/{body_id}/position"
+                rospy.Subscriber(topic_name, Point, self.position_callback)
+
         else:
             rospy.logwarn("No recognized face to assign a location.")
+
+    def position_callback(self, msg):
+        """Callback to position of face being currently detected."""
+        self.data["locations"][self.index] = {
+            "x": msg.point.x,
+            "y": msg.point.y,
+            "z": msg.point.z
+        }
+        self.save_known_faces(self.data)
 
 
 if __name__ == '__main__':
