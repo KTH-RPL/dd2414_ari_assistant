@@ -15,7 +15,7 @@ class FaceRecognitionNode:
         self.bridge = CvBridge()
         
         # Paths for saving data
-        self.database_path = os.path.expanduser("~/catkin_ws/src/dd2414/dd2414_human_detection/src")
+        self.database_path = os.path.dirname(__file__)
         self.encodings_file = os.path.join(self.database_path, "face_database.json")
         os.makedirs(self.database_path, exist_ok=True)
         
@@ -118,17 +118,17 @@ class FaceRecognitionNode:
         return new_id
 
 
-        def add_name_to_face(self, name):
-            """Assign a name to the currently seen face ID."""
-            face_id = self.current_id
-            if face_id:s
-                data = self.load_known_faces()
-                index = data["ids"].index(face_id)
-                data["names"][index] = name
-                self.save_known_faces(data)
-                rospy.loginfo(f"Assigned name {name} to face ID {face_id}")
-            else:
-                rospy.logwarn("No recognized face to assign a name.")
+    def add_name_to_face(self, name):
+        """Assign a name to the currently seen face ID."""
+        face_id = self.current_id
+        if face_id:
+            data = self.load_known_faces()
+            index = data["ids"].index(face_id)
+            data["names"][index] = name
+            self.save_known_faces(data)
+            rospy.loginfo(f"Assigned name {name} to face ID {face_id}")
+        else:
+            rospy.logwarn("No recognized face to assign a name.")
 
 if __name__ == '__main__':
     node = FaceRecognitionNode()
