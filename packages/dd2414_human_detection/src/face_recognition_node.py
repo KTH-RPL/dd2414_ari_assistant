@@ -130,6 +130,19 @@ class FaceRecognitionNode:
         else:
             rospy.logwarn("No recognized face to assign a name.")
 
+    def add_location_to_face(self, location):
+        """Assign a last seen location in the map to the currently seen face ID."""
+        face_id = self.current_id
+        if face_id:
+            data = self.load_known_faces()
+            index = data["ids"].index(face_id)
+            data["location"][index] = location
+            self.save_known_faces(data)
+            rospy.loginfo(f"Assigned location {location} to face ID {face_id}")
+        else:
+            rospy.logwarn("No recognized face to assign a location.")
+
+
 if __name__ == '__main__':
     node = FaceRecognitionNode()
     rospy.spin()
