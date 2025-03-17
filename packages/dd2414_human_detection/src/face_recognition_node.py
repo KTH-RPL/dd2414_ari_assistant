@@ -61,11 +61,14 @@ class FaceRecognitionNode:
         
     def face_id_callback(self, msg):
         """Subscribe to detected face IDs and listen to their aligned image topics."""
-        for face_id in msg.ids:
-            if face_id not in self.face_images_subs:
-                # Subscribe to the aligned face image instead of landmarks
-                aligned_topic = f"/humans/faces/{face_id}/aligned"
-                self.face_images_subs[face_id] = rospy.Subscriber(aligned_topic, Image, self.face_image_callback, callback_args=face_id)
+        if self.enable = true:
+            for face_id in msg.ids:
+                if face_id not in self.face_images_subs:
+                    # Subscribe to the aligned face image instead of landmarks
+                    aligned_topic = f"/humans/faces/{face_id}/aligned"
+                    self.face_images_subs[face_id] = rospy.Subscriber(aligned_topic, Image, self.face_image_callback, callback_args=face_id)
+        else:
+            pass
 
 
     def face_image_callback(self, msg, face_id):
