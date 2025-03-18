@@ -13,9 +13,10 @@ from dd2414_brain_v2 import StatusUpdate
 
 class FaceRecognitionNode:
     def __init__(self):
-        rospy.init_node('face_recognition_node', anonymous=True)
         self.bridge = CvBridge()
         self.hri_listener = HRIListener()
+
+        # self.enable = False
         
         # Paths for saving data
         self.database_path = os.path.dirname(__file__)
@@ -29,6 +30,27 @@ class FaceRecognitionNode:
         self.face_ids_sub = rospy.Subscriber("/humans/faces/tracked", IdsList, self.face_id_callback)
         self.face_images_subs = {}
 
+    def action(self,goal):
+        """
+        This function will execute when it receives a goal from the brain. It will contain a string (goal.goal)
+        which indicates the name of the person we are currently seeing. 
+        """
+        if goal.goal:
+            target_name = goal.goal
+
+            # Save name if its not unknown
+            if target_name == "unknown":
+                break
+            else: 
+                self.add_name_to_face()
+
+        result = "Success"
+
+        return result
+
+    def preempted(self):
+        #Procedure in case the call gets cancelled
+        pass
 
     def load_known_faces(self):
         """Load known face encodings and associated names from the database."""
@@ -44,14 +66,14 @@ class FaceRecognitionNode:
             rospy.logwarn(f"Face database file {self.encodings_file} does not exist.")
         return [], [], []
 
-
+    
     def save_known_faces(self):
         """Save known face encodings and names to the database."""
         # Convert numpy arrays to lists for JSON serialization
         data = {
             'encodings': [encoding.tolist() for encoding in self.known_face_encodings],  # Convert ndarray to list
             'ids': self.known_face_ids,
-            'names': self.known_face_names
+            'names': self.known_face_names,
             'locations' : self.known_face_locations
         }
 
@@ -65,6 +87,7 @@ class FaceRecognitionNode:
         
     def face_id_callback(self, msg):
         """Subscribe to detected face IDs and listen to their aligned image topics."""
+        #if self.enable:
         for face_id in msg.ids:
             if face_id not in self.face_images_subs:
                 # Subscribe to the aligned face image instead of landmarks
@@ -105,7 +128,7 @@ class FaceRecognitionNode:
             return self.known_face_ids[matches.index(True)]
         return None
     
-    def save_new_face(self, face_id, encoding, image, name="Unknown"):
+    def save_new_face(self, face_id, encoding, image, name="unknown"):
         """Save new face encoding, image, and name."""
         new_id = f"person_{len(self.known_face_ids) + 1}"
         self.known_face_encodings.append(encoding)
@@ -169,5 +192,6 @@ class FaceRecognitionNode:
 
 
 if __name__ == '__main__':
-    node = FaceRecognitionNode()
+    rospy.init_node('face_recognition_node', anonymous=True)    
+    server = StatusUpdate(rospy.get_name(), FaceRecognitionNode)
     rospy.spin()
