@@ -9,6 +9,7 @@ from pyhri import HRIListener
 from cv_bridge import CvBridge
 import json
 import numpy as np
+from dd2414_brain_v2 import StatusUpdate
 
 class FaceRecognitionNode:
     def __init__(self):

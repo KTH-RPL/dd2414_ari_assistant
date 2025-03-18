@@ -15,6 +15,8 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   sensor_msgs
   cv_bridge
+  dd2414_brain_v2
+  actionlib
 )
 
 ## System dependencies are found with CMake's conventions
@@ -109,7 +111,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES dd2414_human_detection
-   CATKIN_DEPENDS rospy std_msgs hri_msgs pal_interaction_msgs geometry_msgs sensor_msgs cv_bridge
+   CATKIN_DEPENDS rospy std_msgs hri_msgs pal_interaction_msgs geometry_msgs sensor_msgs cv_bridge dd2414_brain_v2
 #  DEPENDS system_lib
 )
 
