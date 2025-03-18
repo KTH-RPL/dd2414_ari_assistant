@@ -7,7 +7,10 @@ project(dd2414_speech)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS actionlib_msgs actionlib message_generation)
+find_package(catkin REQUIRED
+            COMPONENTS
+            dd2414_brain_v2
+            actionlib)
 
 add_action_files(
   DIRECTORY action
@@ -16,7 +19,7 @@ add_action_files(
 
 generate_messages(DEPENDENCIES actionlib_msgs std_msgs)
 
-catkin_package(CATKIN_DEPENDS actionlib_msgs actionlib message_runtime)
+catkin_package(CATKIN_DEPENDS dd2414_brain_v2)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
