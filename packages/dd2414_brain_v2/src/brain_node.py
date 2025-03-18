@@ -22,6 +22,7 @@ class ARI:
         self.response_msg = Bool()
 
         self._as_go_to_location = actionlib.SimpleActionClient("/nav_move_base_server",brain.BrainAction)
+        self._as_find_speaker = actionlib.SimpleActionClient("/find_speaker",brain.BrainAction)
 
         #To Add More Behaviors just add them to this dictionary and then add the corresponding function
         self.action_dict= {
@@ -29,7 +30,8 @@ class ARI:
                             "goodbye"              :self.goodbye,
                             "stop"                 :self.stop,
                             "name"                 :self.name_assign,
-                            "go to"                :self.go_to_location
+                            "go to"                :self.go_to_location,
+                            "find speaker"         :self.find_speaker
                             }
         
     def response_cb(self,response_msg):
@@ -117,6 +119,11 @@ class ARI:
         self._as_go_to_location.send_goal(goal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
         #wait = self._as_go_to_location.wait_for_result()
         #result = self._as_go_to_location.get_result()
+
+    def find_speaker(self, input):
+        self._as_find_speaker.wait_for_server()
+        goal = brain.BrainActionGoal(goal="")
+        self._as_find_speaker.send_goal(goal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
 
 
 #Dont MOVE ANYTING FROM HERE
