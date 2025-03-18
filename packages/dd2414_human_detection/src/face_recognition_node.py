@@ -22,12 +22,12 @@ class FaceRecognitionNode:
         os.makedirs(self.database_path, exist_ok=True)
         
         # Load known faces from the file
-        self.known_face_encodings, self.known_face_ids, self.known_face_names = self.load_known_faces()
+        self.known_face_encodings, self.known_face_ids, self.known_face_names, self.known_face_locations = self.load_known_faces()
         
         # ROS subscribers
         self.face_ids_sub = rospy.Subscriber("/humans/faces/tracked", IdsList, self.face_id_callback)
         self.face_images_subs = {}
-        self.detected_faces = {}
+
 
     def load_known_faces(self):
         """Load known face encodings and associated names from the database."""
@@ -64,14 +64,12 @@ class FaceRecognitionNode:
         
     def face_id_callback(self, msg):
         """Subscribe to detected face IDs and listen to their aligned image topics."""
-        if self.enable = true:
-            for face_id in msg.ids:
-                if face_id not in self.face_images_subs:
-                    # Subscribe to the aligned face image instead of landmarks
-                    aligned_topic = f"/humans/faces/{face_id}/aligned"
-                    self.face_images_subs[face_id] = rospy.Subscriber(aligned_topic, Image, self.face_image_callback, callback_args=face_id)
-        else:
-            pass
+        for face_id in msg.ids:
+            if face_id not in self.face_images_subs:
+                # Subscribe to the aligned face image instead of landmarks
+                aligned_topic = f"/humans/faces/{face_id}/aligned"
+                self.face_images_subs[face_id] = rospy.Subscriber(aligned_topic, Image, self.face_image_callback, callback_args=face_id)
+
 
 
     def face_image_callback(self, msg, face_id):
@@ -94,7 +92,6 @@ class FaceRecognitionNode:
             
             # Save latest known location if you know the name
             self.add_location_to_face(face_id)
-            
             
         
     def find_matching_face(self, encoding):
