@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+
+  <node name="ari_brain_v2" pkg="dd2414_brain_v2" type="brain_node.py"/>
+
+  <include file="$(find dd2414_speech)/launch/find_speaker.launch"/>
+
+</launch>
