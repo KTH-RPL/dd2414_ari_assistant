@@ -57,10 +57,12 @@
   <depend>geometry_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>cv_bridge</depend>
+  <build_depend>dd2414_brain_v2</build_depend> 
+  <exec_depend>dd2414_brain_v2</exec_depend> 
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
-    <!-- Other tools can request additional information be placed here -->
+  <!-- Other tools can request additional information be placed here -->
 
   </export>
 </package>
