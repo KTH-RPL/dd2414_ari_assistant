@@ -23,6 +23,7 @@ class ARI:
 
         self._as_go_to_location = actionlib.SimpleActionClient("/nav_move_base_server",brain.BrainAction)
         self._as_find_speaker = actionlib.SimpleActionClient("/find_speaker",brain.BrainAction)
+        self._as_save_name = actionlib.SimpleActionClient("/face_recognition_node", brain.BrainAction)
 
         #To Add More Behaviors just add them to this dictionary and then add the corresponding function
         self.action_dict= {
@@ -109,7 +110,10 @@ class ARI:
         return result
     ################################################################################################    
     def name_assign(self,input):
-        pass
+        self._as_save_name.wait_for_server()
+        goal = brain.BrainActionGoal(goal = "Laura")
+        self._as_save_name.send_goal(goal, done_cb = self.cb_done, active_cb = self.cb_active, feedback_cb = self.cb_feedback)
+        
     
 
     def go_to_location(self,input):
