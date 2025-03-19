@@ -26,8 +26,6 @@ class ARI:
 
         #To Add More Behaviors just add them to this dictionary and then add the corresponding function
         self.action_dict= {
-                            "hello"                :self.hello,
-                            "goodbye"              :self.goodbye,
                             "stop"                 :self.stop,
                             "name"                 :self.name_assign,
                             "go to"                :self.go_to_location,
@@ -84,41 +82,21 @@ class ARI:
 
     def cb_active(self):
         self.last_result = "Working"
-    #ERASE THIS ###################################################################################    
-    def goodbye(self,input):
-        while self.response_msg != True:
-            result = "Working"
-            rospy.loginfo("sleep")
-            time.sleep(2)
-        
-        self.response_msg = False
-        result = "Success"
-        #rospy.loginfo("State: "+ self.current_state + " Action: " + "GOODBYE" + " Result: " + result)
-        return result
-    
-    def hello(self,input):
 
-        if self.count == 10:
-            result="Success"
-            self.count = 0
-        else:
-            result="Working"
-        self.count += 1
-
-        #rospy.loginfo("State: "+ self.current_state + " Action: " + "HELLO" + " Result: " + result)
-        return result
-    ################################################################################################    
     def name_assign(self,input):
         pass
     
 
     def go_to_location(self,input):
-        self._as_go_to_location.wait_for_server()
+        if self._as_go_to_location.wait_for_server():
         #Change this for the string input.goal
-        goal = brain.BrainActionGoal(goal="table")
-        self._as_go_to_location.send_goal(goal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
+            rospy.loginfo(input)
+            goal = brain.BrainActionGoal(goal=input["input"])
+            self._as_go_to_location.send_goal(goal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
         #wait = self._as_go_to_location.wait_for_result()
         #result = self._as_go_to_location.get_result()
+        else:
+            self.last_result = "Failure"
 
     def find_speaker(self, input):
         self._as_find_speaker.wait_for_server()

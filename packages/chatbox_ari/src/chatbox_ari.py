@@ -13,6 +13,20 @@ from ollama import Client
 class ChatboxARI:
     def __init__(self):
         rospy.init_node("chatbox_ari")
+        self.intents_action_split = {"greet":[False,False],"remember user":[False,True],"goodbye":[False,False],"follow user":[True,False],"provide information":[False,False],"find object":[True,True],"go to":[True,True],"explore":[True,False],"translate":[True,True],"other":False}
+        self.intents_description  = [
+            "greet: The robot needs to greet the person. The user does not provided his/her name", 
+            "remember user: The robot needs to remember the name of the person that is taliking. This happens ALWAYS when the person introduce itself to the robot and say his/her name, that is the main difference against the action \"greet\" as an example the user might say: hello my name is David, hi I'm Joshua, hello Ari I am Katia, etc."
+            "goodbye: The robot needs to say goodbye to the person",
+            "provide information: The robot needs to answer a question or explain a topic given by the user",
+            "go to: The robot needs to move to an specific place. This action can be detonated by asking or demaning, examples: \"Go to the kitchen\", \"Go to the corner\", \"Move 5 meters\" ",
+            "follow user: The robot needs to continuously following a person and not just \"go to\" towards them, \"come with me\" is an example of the user asking the robot to folow user", 
+            "find object: The robot have to start moving around, in order to find the object or person asked. This action can be detonated by asking things like \"Where is the red ball?\" or demaning a search like \"Find a chair\", \"Where is David?\", \"Find Laura\" ", 
+            "explore: The has to start moving around to create a map of the place, this action can be detonated by saying things like: \"start exploring\", \"create a map\" ", 
+            "translate: The robot has to help the user to translate sentences or a conversation", 
+            "other: If any of the other actions does not fit, the robot has to classify it as other"]
+
+        self.model_ollama = "mistral:latest" #llama3.2:latest, mistral:latest, deepseek-r1:latest
 
         self.dictionary_pub = rospy.Publisher("/intent/detect",String,queue_size=10)
         self.language = "en_US"
@@ -25,8 +39,18 @@ class ChatboxARI:
             headers={'x-some-header': 'some-value'}
         )
 
+        self.system_prompt = "You are a office assistant robot called Ari (not just an AI). Be concise and helpful, give short answers."
 
-        self.system_prompt = "You are a office assistant robot called ARI (not just an AI). Be concise and helpful, give short answers."
+        # API Calibration
+        for initial_msg in ["Hello","Find the red ball","Hello, I am Joshua"]:
+            msg = ["The robot needs to execute one of the following actions:", ' '.join(list(self.intents_action_split.keys())), "The description of each action is the following: ", ' '.join(self.intents_description), ".The user said:", initial_msg,"What action did the user expect from the robot?",
+                ".RETURN ONLY the option that best matches from the list provided, DO NOT mention any of the other ones in the response.", 
+                "Additionally If the intent is \"go to\" return \"go to:specified_place\", if it is \"translate\" return \"translate to:specified_language\"", 
+                " if it is \"find object\" return \"find object:object_to_find\"",
+                " if it is \"remember user\" return \"remember user:user_name\""]
+            msg = ' '.join(msg)
+            _ = self.ask_ollama("",msg)
+        print("CALIBRATION DONE")
 
         # Subscribe to ASR topic
         self.asr_sub = rospy.Subscriber('/humans/voices/anonymous_speaker/speech',LiveSpeech,self.asr_result)
@@ -48,6 +72,7 @@ class ChatboxARI:
     def asr_result(self, msg):
         """ Recognize speech. """
         sentence = msg.final
+        #sentence = msg
         if not sentence:
             return
         
@@ -59,40 +84,62 @@ class ChatboxARI:
         if response:
             self.tts_output(response)
 
+    def ask_ollama(self,promt,msg):
+        completion = self.api.chat(
+            model=self.model_ollama,
+            messages=[
+                {"role": "system", "content": self.system_prompt + promt},
+                {"role": "user", "content": msg},
+                ]
+        )
+        
+        return completion.message.content
+
+    def process_intent(self,intent_ollama,intent_result,user_input):
+        parameter = "unknown"
+        response  = ""
+        promt     = ". Response with no more than 15 words."
+
+        if self.intents_action_split[intent_result][0]:
+            response = "Intializing \"" + intent_result + "\" action."
+        
+        #if intent_result in ["go to","follow user","find object","explore","translate","remember user"]:
+        if self.intents_action_split[intent_result][1] and ":" in intent_ollama:
+            if ": " in intent_ollama: 
+                parameter = intent_ollama.split(": ")
+            else:
+                parameter = intent_ollama.split(":")
+                        
+            parameter = parameter[1]
+
+            if "the" in parameter:
+                parameter = parameter.replace("the ","")
+
+            response = response + " Objective: " + parameter
+
+        if not self.intents_action_split[intent_result][0]:
+            response = self.ask_ollama(promt,user_input)
+            
+        return parameter, response
+
+
     def query_deepseek(self, user_input):
         """ Query DeepSeek API for a response. """
-        intents = ["greet","goodbye","follow user","provide information","find object","go to","explore","translate","other"]
-        intents_description = ["greet: The robot needs to greet the person", 
-                               "goodbye: The robot needs to say goodbye to the person", 
-                               "provide information: The robot needs to answer a question or explain a topic given by the user",
-                               "go to: The robot needs to move to an specific place. This action can be detonated by asking or demaning, examples: \"Go to the kitchen\", \"Go to the corner\", \"Move 5 meters\" ",
-                               "follow user: The robot needs to continuously following a person and not just \"go to\" towards them", 
-                               "find object: The robot have to start moving around, in order to find the object or person asked. This action can be detonated by asking things like \"Where is the red ball?\" or demaning a search like \"Find a chair\", \"Where is David?\", \"Find Laura\" ", 
-                               "explore: The has to start moving around to create a map of the place, this action can be detonated by saying things like: \"start exploring\", \"create a map\" ", 
-                               "translate: The robot has to help the user to translate sentences or a conversation", 
-                               "other: If any of the other actions does not fit, the robot has to classify it as other"]
-
-        model_ollama = "mistral:latest" #llama3.2:latest, mistral:latest, deepseek-r1:latest
+                
         try:
             # Generate a response using the transformer pipeline
-            completion = self.api.chat(
-                model=model_ollama, 
-                messages=[
-                    {"role": "system", "content": self.system_prompt},
-                    {"role": "user", "content": "The robot needs to execute one of the following actions: "+str(intents) + 
-                     "The description of each action is the following: " + str(intents_description) + "."
-                     "The user said: "+str(user_input) 
-                     + "What action did the user expect from the robot?"+ " .RETURN ONLY the option that best matches from the list provided, DO NOT mention any of the other ones in the response." 
-                     + "Additionally If the intent is \"go to\" return \"go to:specified_place\", if it is \"translate\" return \"translate to:specified_language\"" +
-                     " if it is \"find object\" return \"find object:object_to_find\""},
-                    ] 
-            )
+            msg = ["The robot needs to execute one of the following actions:", ' '.join(list(self.intents_action_split.keys())), "The description of each action is the following: ", ' '.join(self.intents_description), ".The user said:", str(user_input),"What action did the user expect from the robot?",
+            ".RETURN ONLY the option that best matches from the list provided, DO NOT mention any of the other ones in the response.", 
+            "Additionally If the intent is \"go to\" return \"go to:specified_place\", if it is \"translate\" return \"translate to:specified_language\"", 
+            " if it is \"find object\" return \"find object:object_to_find\"",
+            " if it is \"remember user\" return \"remember user:user_name\""]
+            msg = ' '.join(msg)
             
-            intent_ollama  = completion.message.content
+            intent_ollama  = self.ask_ollama("",msg)
             rospy.loginfo(f"intent OLLAMA: {intent_ollama}")
 
             phrase_words = set(re.findall(r'\b\w+\b', intent_ollama.lower()))  # Tokenize phrase into words
-            for intent in sorted(intents, key=len, reverse=True):  # Match longer intents first
+            for intent in sorted(list(self.intents_action_split.keys()), key=len, reverse=True):  # Match longer intents first
                 intent_words = set(intent.lower().split())  # Split intent into words
                 if intent_words.issubset(phrase_words):  # Check if all intent words are in the phrase
                     intent_result = intent
@@ -104,37 +151,18 @@ class ChatboxARI:
                 ## ASK USER TO SAY AGAIN 
                 response = "I could not understand, please say it again"
 
-
             else:
                 rospy.loginfo(f"intent: {intent_result}")        
-                parameter = ""
-                if ":" in intent_ollama and intent_result in ["go to","follow user","find object","explore","translate"]:
-                    if intent_result != "follow user" and intent_result != "explore":
-                        parameter = intent_ollama.split(": ")
-                        parameter = parameter[1]
-                        if "the" in parameter:
-                            parameter = parameter.replace("the ","")
 
-                    response = "Intializing \"" + intent_result + "\" action."
-                    if parameter != "":
-                        response = response + " Objective: " + parameter
-
-                else:
-                    completion = self.api.chat(
-                        model=model_ollama,
-                        messages=[
-                            {"role": "system", "content": self.system_prompt + ". Response with no more than 15 words"},
-                            {"role": "user", "content": user_input},
-                            ]
-                    )
-                    response = completion.message.content
-                    parameter = ""
+                parameter, response = self.process_intent(intent_ollama,intent_result,user_input)
+                if response == "":
+                    intent_result =""
                 
                 #Publish the intent
                 intent_dictionary = {"intent":intent_result,"input":parameter}
                 json_string = json.dumps(intent_dictionary)
                 self.dictionary_pub.publish(json_string)        
-                
+                print(json_string)
                 rospy.loginfo(f"DeepSeek Response: {response}")
             
             return response
@@ -156,3 +184,20 @@ if __name__ == '__main__':
         rospy.spin()
     except rospy.ROSInterruptException:
         rospy.logerr("ROS Node interrupted.")
+
+
+
+
+ #completion = self.api.chat(
+            #    model=self.model_ollama, 
+            #    messages=[
+            #        {"role": "system", "content": self.system_prompt},
+            #        {"role": "user", "content": "The robot needs to execute one of the following actions: "+str(self.intents) + 
+            #         "The description of each action is the following: " + str(intents_description) + "."
+            #         "The user said: "+str(user_input) 
+            #         + "What action did the user expect from the robot?"+ " .RETURN ONLY the option that best matches from the list provided, DO NOT mention any of the other ones in the response." 
+            #         + "Additionally If the intent is \"go to\" return \"go to:specified_place\", if it is \"translate\" return \"translate to:specified_language\"" 
+            #         + " if it is \"find object\" return \"find object:object_to_find\""
+            #         + " if it is \"remember user\" return \"remember user:user_name\""},
+            #        ] 
+            #)
