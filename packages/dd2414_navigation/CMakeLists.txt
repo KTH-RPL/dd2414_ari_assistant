@@ -7,7 +7,10 @@ project(dd2414_navigation)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED)
+find_package(catkin REQUIRED COMPONENTS
+    dd2414_brain_v2
+    actionlib
+)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -58,14 +61,16 @@ find_package(catkin REQUIRED)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
-#   FILES
-#   Action1.action
+#    DIRECTORY action
+#    FILES
+#    Brain.action
 #   Action2.action
 # )
 
 ## Generate added messages and services with any dependencies listed here
 # generate_messages(
 #   DEPENDENCIES
+#   actionlib_msgs
 #   std_msgs  # Or other packages containing msgs
 # )
 
@@ -101,7 +106,7 @@ find_package(catkin REQUIRED)
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES dd2214_navigation
-#  CATKIN_DEPENDS other_catkin_pkg
+  CATKIN_DEPENDS dd2414_brain_v2
 #  DEPENDS system_lib
 )
 
@@ -113,7 +118,7 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
 # include
-# ${catkin_INCLUDE_DIRS}
+ ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library

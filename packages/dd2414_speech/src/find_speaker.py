@@ -1,0 +1,172 @@
+#!/usr/bin/env python3
+
+import rospy
+import actionlib
+import tf2_ros as tf
+import numpy as np
+import pyhri
+from std_msgs.msg import Int32, Bool, String
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from tf.transformations import quaternion_from_euler
+from dd2414_status_update import StatusUpdate
+
+class FindSpeakerActionServer:
+    
+    def __init__(self):
+
+        self.result = ""
+
+        self.directions = []
+        self.speaking_in_progress = False
+        self.turning_to_speech = False
+        self.finding_speaker_active = False
+        self.turning_goal = MoveBaseGoal()
+
+        self.hri_listener = pyhri.HRIListener()
+
+        self.speech_sub = rospy.Subscriber('/humans/voices/anonymous_speaker/is_speaking', Bool, self.speech_cb, queue_size=10)
+        rospy.loginfo(f"FindSpeaker::Subscribed to {self.speech_sub.resolved_name}")
+
+        self.person_found_sub = rospy.Subscriber('person_looking_at_robot', String, self.person_found_cb, queue_size=10)
+        rospy.loginfo(f"FindSpeaker::Subscribed to {self.person_found_sub.resolved_name}")
+
+        self.direction_sub = rospy.Subscriber('/audio/sound_direction', Int32, self.direction_cb)
+        rospy.loginfo(f"FindSpeaker::Subscribed to {self.direction_sub.resolved_name}")
+
+        self.move_base_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        self.move_base_client.wait_for_server()
+        
+    def action(self,goal):
+        rospy.loginfo("FindSpeaker::Request to look at speaker received")
+        self.person_found = False
+        self.finding_speaker_active = True
+        
+        if(len(self.directions) > 0):
+            median_direction = np.median(self.directions)
+            self.rotate_to(median_direction)
+            self.directions = []
+        else:
+            rospy.loginfo("FindSpeaker::Previous speech could not be localized")
+            self.result = "Failure"
+            self.finding_speaker_active = False
+        return self.result
+    
+    def preempted(self):
+        rospy.loginfo("FindSpeaker::Goal preempted")
+        self.move_base_client.cancel_goal(self.turning_goal)
+        self.finding_speaker_active = False
+        self.result = "Failure" # Mark the goal as preempted
+        return self.result        
+    
+    def rotate_to(self, direction):
+
+        rospy.loginfo(f"FindSpeaker::Sending request to rotate in direction {direction}")
+
+        self.turning_to_speech = True
+        rotation_rad = np.deg2rad(-2*direction)
+
+        goal = MoveBaseGoal()
+        goal.target_pose.header.frame_id = "base_link"
+        goal.target_pose.header.stamp = rospy.Time.now()
+
+        quat = quaternion_from_euler(0, 0, rotation_rad)
+        goal.target_pose.pose.orientation.x = quat[0]
+        goal.target_pose.pose.orientation.y = quat[1]
+        goal.target_pose.pose.orientation.z = quat[2]
+        goal.target_pose.pose.orientation.w = quat[3]
+
+        self.move_base_client.send_goal(goal)
+        self.turning_goal = goal
+        self.move_base_client.wait_for_result()
+
+        self.turning_to_speech = False
+
+        # Wait to see if body is found during or after rotation
+        rospy.sleep(2)
+        if(self.finding_speaker_active):
+            rospy.loginfo("FindSpeaker::Finished turning towards speech, could not find body")
+            self.result = "Failure"
+            self.finding_speaker_active = False
+
+
+        rospy.loginfo("FindSpeaker::Finished turning towards speech")
+
+    # When body looking at ari is detected, turn to body
+    def person_found_cb(self, data):
+        if(data.data != "" and self.finding_speaker_active):
+            rospy.loginfo("FindSpeaker::Found body looking at ari")
+            self.finding_speaker_active = False
+            self.result = "Success"
+            
+            if(self.turning_to_speech):
+                self.move_base_client.cancel_goal(self.turning_goal)
+                self.turning_to_speech = False
+
+            goal = MoveBaseGoal()
+            body = self.hri_listener.bodies.get(data.data)
+
+            try:
+                transform = body.transform("base_link").transform
+
+                target_x = transform.translation.x
+                target_y = transform.translation.y
+
+                yaw = np.arctan2(target_y, target_x)
+                quat = quaternion_from_euler(0, 0, yaw)
+
+                goal = MoveBaseGoal()
+
+                goal.target_pose.header.frame_id = 'base_link'
+                
+                goal.target_pose.pose.orientation.x = quat[0]
+                goal.target_pose.pose.orientation.y = quat[1]
+                goal.target_pose.pose.orientation.z = quat[2]
+                goal.target_pose.pose.orientation.w = quat[3]
+
+                goal.target_pose.header.stamp = rospy.Time.now()
+
+                self.turning_goal = goal
+                self.move_base_client.send_goal(goal)
+                wait = self.move_base_client.wait_for_result()
+                rospy.loginfo("FindSpeaker::Finished turning to body")                
+            except:
+                rospy.loginfo("FindSpeaker::Could not transform body frame")
+
+            return self.result
+
+    # Check for speech, always active
+    def speech_cb(self, data):
+        if(data.data):
+            rospy.loginfo("FindSpeaker::Speech started, recording direction")
+            if(not self.speaking_in_progress):
+                self.directions = []
+            self.speaking_in_progress = True
+            return
+        else:
+            rospy.loginfo("FindSpeaker::Speech stopped, stopped recording direction")
+            self.speaking_in_progress = False
+    
+    # Save directions, active during speech
+    def direction_cb(self, data):        
+        if(self.speaking_in_progress):
+            direction = data.data
+            if(direction == 180):
+                return
+            elif(direction < -90):
+                self.directions.append((-direction) - 180)
+            elif(direction > 90):
+                self.directions.append((-direction) + 180)
+            else:
+                self.directions.append(direction)
+
+if __name__ == '__main__':
+
+    try:
+        # Initialize the node
+        rospy.init_node('find_speaker', anonymous=True)
+        server = StatusUpdate(rospy.get_name(),FindSpeakerActionServer)
+        rospy.spin()
+        
+    except rospy.ROSInterruptException:
+        pass
+
