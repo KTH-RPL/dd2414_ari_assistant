@@ -22,7 +22,7 @@ class BodyOrientationListener:
 
         self.id_pub = rospy.Publisher('person_looking_at_robot', String, queue_size=10)
 
-        self.rate = rospy.Rate(1)
+        self.rate = rospy.Rate(10)
         self.is_body_facing_robot = False
 
 

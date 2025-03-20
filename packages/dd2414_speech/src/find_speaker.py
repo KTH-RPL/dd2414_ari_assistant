@@ -62,8 +62,13 @@ class FindSpeakerActionServer:
 
         rospy.loginfo(f"FindSpeaker::Sending request to rotate in direction {direction}")
 
+        
         self.turning_to_speech = True
-        rotation_rad = np.deg2rad(-2*direction)
+        if direction >= 0 :
+            rotation_rad = np.deg2rad(180+10)
+        else:
+            rotation_rad = np.deg2rad(180-10)
+        #rotation_rad = np.deg2rad(-2*direction)
 
         goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = "base_link"
@@ -99,7 +104,7 @@ class FindSpeakerActionServer:
             self.result = "Success"
             
             if(self.turning_to_speech):
-                self.move_base_client.cancel_goal(self.turning_goal)
+                self.move_base_client.cancel_goal()
                 self.turning_to_speech = False
 
             goal = MoveBaseGoal()
