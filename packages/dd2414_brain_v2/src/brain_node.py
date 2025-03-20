@@ -17,10 +17,11 @@ class ARI:
 
         self.timeout = rospy.get_param("~timeout",10)
 
-        self.person_found_sub = rospy.Subscriber('person_looking_at_robot', String, self.person_found_cb, queue_size=10)
+        self.person_found_sub   = rospy.Subscriber('person_looking_at_robot', String, self.person_found_cb, queue_size=10)
         self._as_go_to_location = actionlib.SimpleActionClient("/nav_move_base_server",brain.BrainAction)
-        self._as_find_speaker = actionlib.SimpleActionClient("/find_speaker",brain.BrainAction)
-        self._as_follow_user = actionlib.SimpleActionClient("/follow_user",brain.BrainAction)
+        self._as_find_speaker   = actionlib.SimpleActionClient("/find_speaker",brain.BrainAction)
+        self._as_follow_user    = actionlib.SimpleActionClient("/follow_user",brain.BrainAction)
+        self._as_move_to_person = actionlib.SimpleActionClient("/body_orientation_listener",brain.BrainAction)
 
         #To Add More Behaviors just add them to this dictionary and then add the corresponding function
         self.action_dict= {
@@ -28,7 +29,8 @@ class ARI:
                             "name"                 :self.name_assign,
                             "go to"                :self.go_to_location,
                             "find speaker"         :self.find_speaker,
-                            "follow user"          :self.follow_user
+                            "follow user"          :self.follow_user,
+                            "translate"            :self.translate
                             }
         
     def response_cb(self,response_msg):
@@ -111,11 +113,23 @@ class ARI:
 
     def follow_user(self, input):
         if self._as_follow_user.wait_for_server(rospy.Duration(self.timeout)):
-            self._as_follow_user.wait_for_server()
             ActionGoal = brain.BrainGoal()
             self._as_follow_user.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
         else:
             self.last_result = "Failure"
+
+    def move_to_person(self):
+        if self._as_move_to_person.wait_for_server(rospy.Duration(self.timeout)):
+            ActionGoal = brain.BrainGoal()
+            self._as_move_to_person.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
+        else:
+            self.last_result = "Failure"
+        
+        return self.last_result 
+
+    def translate(self, input):
+        move_to_person = self.move_to_person()
+        #if move_to_person == "Success" 
 
 
 #Dont MOVE ANYTING FROM HERE
