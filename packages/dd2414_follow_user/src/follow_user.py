@@ -17,6 +17,7 @@ from hri_msgs.msg import LiveSpeech
 from control_msgs.msg import FollowJointTrajectoryActionGoal, PointHeadActionGoal
 from geometry_msgs.msg import PointStamped, Point
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from dd2414_status_update import StatusUpdate
 from pal_interaction_msgs.msg import TtsAction, TtsGoal
 
 
@@ -142,7 +143,7 @@ class ARIHeadFollower:
 
         while not rospy.is_shutdown():            
             try:
-                if len(self.hri_listener.bodies) > 0 and (not self.stop): # are bodies detected?
+                if len(self.hri_listener.bodies) > 0: #and (not self.stop): # are bodies detected?
                     # Get transform from head_camera_link to detected body
                     #transform = self.tf_buffer.lookup_transform('base_link', 'head_camera_link', rospy.Time(0), rospy.Duration(1.0))
                     #trans = transform.transform.translation
@@ -209,7 +210,7 @@ class ARIHeadFollower:
 
                     else:
                         self.approach(bodies.frame)
-
+                        
             except Exception as e:
                 rospy.logwarn(f"Could not transform: {e}")
 
