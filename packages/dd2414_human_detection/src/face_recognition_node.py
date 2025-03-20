@@ -11,6 +11,9 @@ from cv_bridge import CvBridge
 import json
 import numpy as np
 from dd2414_status_update import StatusUpdate
+import dd2414_brain_v2.msg as brain
+
+
 
 class FaceRecognitionNode:
     def __init__(self):
@@ -36,6 +39,8 @@ class FaceRecognitionNode:
         This function will execute when it receives a goal from the brain. It will contain a string (goal.goal)
         which indicates the name of the person we are currently seeing. 
         """
+        result = brain.BrainActionResult()
+
         if goal.goal:
             self.target_name = goal.goal
 
@@ -43,10 +48,24 @@ class FaceRecognitionNode:
             if self.target_name != "unknown":
                 rospy.loginfo(f"Save name: {self.target_name}")
                 self.add_name_to_face(self.target_name)
-                
 
-        result = "Success"
-        return result
+                # Return name that was saved
+                result.dict = self.target_name
+
+            
+            else:
+                rospy.loginfo(f"Name unknown. Searching if we already know it.")
+                name = self.search_for_name()
+
+                # Return name if we know it
+                if name:
+                    result.dict = name
+                else:
+                    result.dict = "unknown"
+
+            result.result = "Success"
+            return result
+
 
     def preempted(self):
         #Procedure in case the call gets cancelled
@@ -210,6 +229,33 @@ class FaceRecognitionNode:
             "z": msg.z
         }
         self.save_known_faces()
+
+    
+    def search_for_name(self):
+        """ Search if the name of the person the robot is looking at currently has a name saved.
+            Send it to the brain to greet person by name."""
+        face_id = self.current_id
+        if face_id:
+            try:
+                index = self.known_faces["ids"].index(face_id)
+            except ValueError:
+                rospy.logwarn("Face ID not found for location update.")
+                return
+
+        # Obtain name
+        name = self.known_faces["names"][index]
+
+        # If a name has been obtained, return it
+        if name:
+            return name
+        
+        return
+
+
+
+
+
+    
 
 
 if __name__ == '__main__':
