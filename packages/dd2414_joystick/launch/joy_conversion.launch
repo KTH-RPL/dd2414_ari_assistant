@@ -11,14 +11,14 @@
   </node>
 
   <!--Mapping joy twist messages to cmd_vel-->
-  <node pkg="dd2414_joystick" type="joy_conversion_node" name="joy_conversion" >
+  <node pkg="dd2414_joystick" type="joy_conversion_node.py" name="joy_conversion" >
     <!--Output from joystick node-->
     <param name="joy_out" value="$(arg joy_out)" />
     <!--Output from this node-->
     <param name="conversion_out" value="$(arg conversion_out)" />
 
     <!--Timeout in sec before warning pops up, set to 0 if dont want warnigns to show-->
-    <param name="timeout" type="int" value="30" />
+    <param name="timeout" type="int" value="20" />
   </node>
 
 </launch>

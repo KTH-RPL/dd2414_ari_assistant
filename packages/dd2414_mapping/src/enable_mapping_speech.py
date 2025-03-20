@@ -69,10 +69,10 @@ class Mapper(object):
         
     def speech_cb(self, data):
         # When speech is published, either start or end mapping
-        if data.final == "stop mapping":
+        if data.final == "stop exploring":
             self.end_mapping()
 
-        if data.final == "start mapping":
+        if data.final == "start exploring":
             self.start_mapping()
 
 

@@ -2,33 +2,71 @@
 
 import rospy
 
+from dd2414_status_update import StatusUpdate
+
 import actionlib
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from tf import transformations as t
+import math
+import numpy as np
+        
 
-def nav_move_base(req_x, req_y):
-    move_client = actionlib.SimpleActionClient('/move_base', MoveBaseAction)
-    move_client.wait_for_server()
-    rospy.loginfo("Move base client ready")
+class MoveBase:
+    def __init__(self):
+        self.move_client = actionlib.SimpleActionClient('/move_base', MoveBaseAction)
+        self.location_dict = {"desk" : (-1.0     , 1.0),
+                              "table" :(-1.0    , -1.0)}
+        
+    def action(self,goal):
+        if goal.goal in self.location_dict:
+            position = self.location_dict[goal.goal]
+            result = self.nav_move_base(position[0],position[1])
+            return result
+        else:
+            return "Failure"
 
-    goal = MoveBaseGoal()
-    goal.target_pose.header.frame_id = "map"
-    goal.target_pose.header.stamp = rospy.Time.now()
-    goal.target_pose.pose.position.x = req_x
-    goal.target_pose.pose.position.y = req_y
-    goal.target_pose.pose.orientation.w = 1.0
+    def preempted(self):
+        pass
+    
+#    def cb_done (self,status,result):
+#        pass
+#    def cb_feedback(self,feedback):
+#        pass
+#    def cb_active(self):
+#        pass
+    def nav_move_base(self,req_x, req_y):
+        self.move_client.wait_for_server()
+        rospy.loginfo("Move base client ready")
 
-    rospy.loginfo("Sending goal")
-    move_client.send_goal(goal)
-    wait = move_client.wait_for_result()
-    return move_client.get_result()
+        goal = MoveBaseGoal()
+        goal.target_pose.header.frame_id = "map"
+        goal.target_pose.header.stamp = rospy.Time.now()
+        goal.target_pose.pose.position.x = req_x
+        goal.target_pose.pose.position.y = req_y
+        theta = math.atan2(req_y,req_x) + np.pi
+        quat = t.quaternion_from_euler(0,0,theta)
+        goal.target_pose.pose.orientation.x = quat[0]
+        goal.target_pose.pose.orientation.y = quat[1]
+        goal.target_pose.pose.orientation.z = quat[2]
+        goal.target_pose.pose.orientation.w = quat[3]
+
+        rospy.loginfo("Sending goal")
+        self.move_client.send_goal(goal)
+        timeout = rospy.Duration(20)
+        wait = self.move_client.wait_for_result(timeout)
+        status = self.move_client.get_state()
+        result = self.move_client.get_result()
+        rospy.loginfo(wait)
+        rospy.loginfo(status)
+        rospy.loginfo(result)
+        if status == 3:
+            return "Success"
+        elif status == 0:
+            return "Working"
+        else:
+            return "Failure"
 
 if __name__ == '__main__':
-    req_position_x = float(rospy.get_param('pos_x'))
-    req_position_y = float(rospy.get_param('pos_y'))
-    try:
-        rospy.init_node('nav_move_base_client')
-        result = nav_move_base(req_position_x, req_position_y)
-        if result:
-            rospy.loginfo("Arrived at target!")
-    except rospy.ROSInterruptException:
-        rospy.loginfo("Finished.")
+    rospy.init_node('nav_move_base_server')
+    server = StatusUpdate(rospy.get_name(),MoveBase)
+    rospy.spin()
