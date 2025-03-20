@@ -21,6 +21,7 @@ class FaceRecognitionNode:
         self.hri_listener = HRIListener()
 
         self.target_name = None
+        self.current_id = None
         
         # Paths for saving data
         self.database_path = os.path.dirname(__file__)
