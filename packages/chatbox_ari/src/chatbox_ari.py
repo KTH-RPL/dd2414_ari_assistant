@@ -28,7 +28,7 @@ class ChatboxARI:
 
         self.model_ollama = "mistral:latest" #llama3.2:latest, mistral:latest, deepseek-r1:latest
 
-        self.dictionary_pub = rospy.Publisher("/intent/detect",String,queue_size=10)
+        self.dictionary_pub = rospy.Publisher("/brain/intent",String,queue_size=10)
         self.language = "en_US"
 
         base_url = "https://api.aimlapi.com/v1"
@@ -42,6 +42,7 @@ class ChatboxARI:
         self.system_prompt = "You are a office assistant robot called Ari (not just an AI). Be concise and helpful, give short answers."
 
         # API Calibration
+        rospy.loginfo("INITIALIZING CALIBRATION")
         for initial_msg in ["Hello","Find the red ball","Hello, I am Joshua"]:
             msg = ["The robot needs to execute one of the following actions:", ' '.join(list(self.intents_action_split.keys())), "The description of each action is the following: ", ' '.join(self.intents_description), ".The user said:", initial_msg,"What action did the user expect from the robot?",
                 ".RETURN ONLY the option that best matches from the list provided, DO NOT mention any of the other ones in the response.", 
@@ -50,7 +51,7 @@ class ChatboxARI:
                 " if it is \"remember user\" return \"remember user:user_name\""]
             msg = ' '.join(msg)
             _ = self.ask_ollama("",msg)
-        print("CALIBRATION DONE")
+        rospy.loginfo("CALIBRATION DONE")
 
         # Subscribe to ASR topic
         self.asr_sub = rospy.Subscriber('/humans/voices/anonymous_speaker/speech',LiveSpeech,self.asr_result)
@@ -60,6 +61,7 @@ class ChatboxARI:
         self.tts_client.wait_for_server()
 
         rospy.loginfo("OLLAMA ARI node ready!")
+        self.tts_output("Ready to operate")
         #self.run()
 
     # For testing porpuses
@@ -147,13 +149,12 @@ class ChatboxARI:
                 else:
                     intent_result = "No match found"
 
+            rospy.loginfo(f"intent: {intent_result}") 
             if intent_result == "No match found" or intent_result == "other":
                 ## ASK USER TO SAY AGAIN 
                 response = "I could not understand, please say it again"
 
             else:
-                rospy.loginfo(f"intent: {intent_result}")        
-
                 parameter, response = self.process_intent(intent_ollama,intent_result,user_input)
                 if response == "":
                     intent_result =""
