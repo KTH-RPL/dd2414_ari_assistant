@@ -14,13 +14,10 @@ class ARI:
         self.current_state = "Idle"
         self.last_result = "Success"
         self.current_intent = "stop"
-        self.count = 0
 
+        self.timeout = rospy.get_param("~timeout",10)
 
-        #Goodbye Subscriber for Example will be replaced with a Service call
-        self.response_sub = rospy.Subscriber("~response",Bool,self.response_cb)
-        self.response_msg = Bool()
-
+        self.person_found_sub = rospy.Subscriber('person_looking_at_robot', String, self.person_found_cb, queue_size=10)
         self._as_go_to_location = actionlib.SimpleActionClient("/nav_move_base_server",brain.BrainAction)
         self._as_find_speaker = actionlib.SimpleActionClient("/find_speaker",brain.BrainAction)
         self._as_follow_user = actionlib.SimpleActionClient("/follow_user",brain.BrainAction)
@@ -44,6 +41,8 @@ class ARI:
             self.action_dict["stop"]({})
 
         elif self.current_state == "Idle" and intent in self.action_dict: #If Robot is Idle and the requested action is valid
+            if not self.person_looking_at_ari:
+                self.action_dict["find speaker"]()
             self.current_intent = intent #Save the Current action
             self.current_state = "Busy"
             self.action_dict[self.current_intent](input)
@@ -88,9 +87,11 @@ class ARI:
     def name_assign(self,input):
         pass
     
+    def person_found_cb(self,msg):
+        self.person_looking_at_ari = msg.data
 
     def go_to_location(self,input):
-        if self._as_go_to_location.wait_for_server():
+        if self._as_go_to_location.wait_for_server(rospy.Duration(self.timeout)):
         #Change this for the string input.goal
             rospy.loginfo(input)
             ActionGoal = brain.BrainGoal()
@@ -102,14 +103,19 @@ class ARI:
             self.last_result = "Failure"
 
     def find_speaker(self, input):
-        self._as_find_speaker.wait_for_server()
-        goal = brain.BrainGoal()
-        self._as_find_speaker.send_goal(goal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
+        if self._as_find_speaker.wait_for_server(rospy.Duration(self.timeout)):
+            ActionGoal = brain.BrainGoal()
+            self._as_find_speaker.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
+        else:
+            self.last_result = "Failure"
 
     def follow_user(self, input):
-        self._as_follow_user.wait_for_server()
-        goal = brain.BrainGoal()
-        self._as_follow_user.send_goal(goal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
+        if self._as_follow_user.wait_for_server(rospy.Duration(self.timeout)):
+            self._as_follow_user.wait_for_server()
+            ActionGoal = brain.BrainGoal()
+            self._as_follow_user.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
+        else:
+            self.last_result = "Failure"
 
 
 #Dont MOVE ANYTING FROM HERE
