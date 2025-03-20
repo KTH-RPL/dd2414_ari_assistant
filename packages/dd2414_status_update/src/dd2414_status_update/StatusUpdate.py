@@ -5,8 +5,8 @@ import actionlib
 import dd2414_brain_v2.msg as brain
 
 class StatusUpdate:
-    _feedback = brain.BrainActionFeedback()
-    _result = brain.BrainActionResult()
+    _feedback = brain.BrainFeedback()
+    _result = brain.BrainResult()
 
     def __init__(self,name,NodeClass):
         self._action_name = name
@@ -33,10 +33,17 @@ class StatusUpdate:
             self._as.set_preempted()
             rospy.loginfo("Goal Preempted.")
         else:
+            while status == "Working":
+                if self._as.is_preempt_requested():
+                    #If goal has been canceled perform necessary shutdown behavior
+                    self.node.preempted()
+                    ##################################################
+                    self._as.set_preempted()
+                    rospy.loginfo("Goal Preempted.")
 
-            self._feedback.feedback = status
-            self._as.publish_feedback(self._feedback)
-            status = self.node.action(goal)
+                self._feedback.feedback = status
+                self._as.publish_feedback(self._feedback)
+                status = self.node.action(goal)
             if status == "Success":
                 self._result.result = status
                 rospy.loginfo("Action Server " + self._action_name + " Succeded.")
