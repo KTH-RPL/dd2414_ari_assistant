@@ -25,7 +25,7 @@ class ARIHeadFollower:
     def __init__(self):
         self.hri_listener = HRIListener()
         self.rate  = rospy.Rate(1)
-        self.stop  = True
+        self.stop  = False
         self.br    = tf_B()
         self._tf_buffer = Buffer()
         self._tf_Listener = TransformListener()
@@ -140,6 +140,12 @@ class ARIHeadFollower:
             print(e)
             print("Transform not published yet")
 
+    def action (self,goal):
+        return self.track_user()
+
+    def preempted(self):
+        #Cancel CURRENT GOAL
+        pass
 
     def track_user(self):
 
@@ -214,6 +220,7 @@ class ARIHeadFollower:
                         self.approach(bodies.frame)
 
                 if self.stop:
+                    self.stop = False
                     return "Success"
                         
                 return "Working"
@@ -225,7 +232,6 @@ class ARIHeadFollower:
 
 if __name__ == "__main__":
     rospy.init_node("follow_user")
-    follower = ARIHeadFollower()
     server = StatusUpdate(rospy.get_name(),ARIHeadFollower)
 
 
