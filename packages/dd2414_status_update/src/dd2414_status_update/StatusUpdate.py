@@ -5,8 +5,8 @@ import actionlib
 import dd2414_brain_v2.msg as brain
 
 class StatusUpdate:
-    _feedback = brain.BrainActionFeedback()
-    _result = brain.BrainActionResult()
+    _feedback = brain.BrainFeedback()
+    _result = brain.BrainResult()
 
     def __init__(self,name,NodeClass):
         self._action_name = name

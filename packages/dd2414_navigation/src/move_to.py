@@ -55,10 +55,10 @@ class MoveBase:
         timeout = rospy.Duration(20)
         wait = self.move_client.wait_for_result(timeout)
         status = self.move_client.get_state()
-        #result = self.move_client.get_result()
-        #rospy.loginfo(wait)
-        #rospy.loginfo(status)
-        #rospy.loginfo(result)
+        result = self.move_client.get_result()
+        rospy.loginfo(wait)
+        rospy.loginfo(status)
+        rospy.loginfo(result)
         if status == 3:
             return "Success"
         elif status == 0:
