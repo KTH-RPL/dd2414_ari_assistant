@@ -19,6 +19,7 @@ from tf import LookupException,ExtrapolationException,ConnectivityException
 from tf2_ros import Buffer
 from hri_msgs.msg import IdsList, LiveSpeech
 from geometry_msgs.msg import Point, PointStamped
+from dd2414_status_update import StatusUpdate
 from pal_interaction_msgs.msg import TtsAction, TtsGoal
 from std_msgs.msg import String
 from ollama import Client
@@ -124,7 +125,15 @@ class BodyOrientationListener:
         rospy.loginfo(move_client.get_goal_status_text())
         
         return move_client.get_state()
+    
+    def action(self,goal):
+        #Procedure when the action gets called
+        #THE POSSIBLE RETURN VALUES ARE "Success","Failure","Working"
+        return self.run()
 
+    def preempted(self):
+        #Procedure in case the call gets cancelled
+        pass
 
     def run(self):
         
@@ -183,14 +192,23 @@ class BodyOrientationListener:
 
                             if result == actionlib.GoalStatus.SUCCEEDED:
                                 rospy.loginfo("Arrived at target!")
+                                return "Success"
                                 
                             else:
                                 rospy.loginfo("Trying right position!")
                                 result = self.nav_move_base(right_trans[0],right_trans[1],0,right_rot[0],right_rot[1],right_rot[2],right_rot[3])
+                                if result == actionlib.GoalStatus.SUCCEEDED:
+                                    return "Success"
+                                else:
+                                    return "Failure"
                         else:
                             rospy.loginfo("Transform not available!")
-                    except rospy.ROSInterruptException:
-                        rospy.loginfo("Finished.")
+                            return "Working"
+                        
+                    except rospy.ROSInterruptException as e:
+                        rospy.loginfo(e)
+                        return "Working"
+                        
 
             self.rate.sleep()
 
