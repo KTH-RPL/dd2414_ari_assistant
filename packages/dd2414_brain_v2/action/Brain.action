@@ -1,11 +1,11 @@
 #goal definition
 string goal
-string dict
+string in_dic
 ---
 #result definition
 string result
-string dict
+string in_dic
 ---
 #feedback
 string feedback
-string dict
+string in_dic

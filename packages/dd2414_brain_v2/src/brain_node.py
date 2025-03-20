@@ -91,8 +91,9 @@ class ARI:
         if self._as_go_to_location.wait_for_server():
         #Change this for the string input.goal
             rospy.loginfo(input)
-            goal = brain.BrainActionGoal(goal=input["input"])
-            self._as_go_to_location.send_goal(goal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
+            ActionGoal = brain.BrainGoal()
+            ActionGoal.goal = input["input"]
+            self._as_go_to_location.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
         #wait = self._as_go_to_location.wait_for_result()
         #result = self._as_go_to_location.get_result()
         else:
@@ -100,7 +101,7 @@ class ARI:
 
     def find_speaker(self, input):
         self._as_find_speaker.wait_for_server()
-        goal = brain.BrainActionGoal(goal="")
+        goal = brain.BrainGoal(goal="")
         self._as_find_speaker.send_goal(goal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
 
 
