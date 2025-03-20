@@ -1,8 +1,11 @@
 #goal definition
 string goal
+string dict
 ---
 #result definition
 string result
+string dict
 ---
 #feedback
 string feedback
+string dict
