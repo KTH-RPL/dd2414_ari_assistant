@@ -12,12 +12,6 @@ find_package(catkin REQUIRED
             dd2414_brain_v2
             actionlib)
 
-add_action_files(
-  DIRECTORY action
-  FILES FindSpeaker.action
-)
-
-generate_messages(DEPENDENCIES actionlib_msgs std_msgs)
 
 catkin_package(CATKIN_DEPENDS dd2414_brain_v2)
 
