@@ -131,6 +131,7 @@ class ChatboxARI:
                 parameter = intent_ollama.split(":")
                         
             parameter = parameter[1].replace(".", "")
+            parameter = parameter.lower()
 
             if len(parameter.split()) > 2:
                  return "", ""
@@ -154,10 +155,11 @@ class ChatboxARI:
         return parameter, response
     
     def wait_for_brain(self,actual_time):
-        rospy.loginfo(f"Waiting for brain: {self.brain_state_data}")
-        while self.brain_state_data != "Idle" or (self.brain_msg_time - actual_time) < 2 :
-            self.rate.sleep()
-        rospy.loginfo(f"State:{self.brain_state_data}, DIff: {self.brain_msg_time - actual_time}")
+        rospy.loginfo(f"Waiting for brain")
+        while (self.brain_state_data != "Idle" ) or (self.brain_state_data == "Idle" and (self.brain_msg_time - actual_time) < 2.2 ): 
+            rospy.sleep(1.1)
+            rospy.loginfo(f"Waiting for brain: {self.brain_state_data}")
+        rospy.loginfo(f"State:{self.brain_state_data}, Diff: {self.brain_msg_time - actual_time}")
     
     def reject_msg(self):
 
