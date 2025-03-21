@@ -17,6 +17,7 @@ from hri_msgs.msg import LiveSpeech
 from control_msgs.msg import FollowJointTrajectoryActionGoal, PointHeadActionGoal
 from geometry_msgs.msg import PointStamped, Point
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from dd2414_status_update import StatusUpdate
 from pal_interaction_msgs.msg import TtsAction, TtsGoal
 
 
@@ -24,7 +25,7 @@ class ARIHeadFollower:
     def __init__(self):
         self.hri_listener = HRIListener()
         self.rate  = rospy.Rate(1)
-        self.stop  = True
+        self.stop  = False
         self.br    = tf_B()
         self._tf_buffer = Buffer()
         self._tf_Listener = TransformListener()
@@ -43,6 +44,8 @@ class ARIHeadFollower:
         self.head_1_min, self.head_1_max = -1.2, 1.2
         self.head_2_min, self.head_2_max = -0.2, 0.4
 
+        self.track_user
+
     def asr_result(self,msg):
         sentence = msg.final
         rospy.loginfo(f"Understood sentence: {sentence}")
@@ -52,10 +55,10 @@ class ARIHeadFollower:
             rospy.loginfo("Stoping Following behavior")
             self.tts_output("Stopping Follow User behavior")
         
-        if sentence.lower() == "follow":
-            rospy.loginfo("Starting Following behavior")
-            self.tts_output("Starting Follow User behavior")
-            self.stop = False
+        #if sentence.lower() == "follow":
+        #    rospy.loginfo("Starting Following behavior")
+        #    self.tts_output("Starting Follow User behavior")
+        #    self.stop = False
 
     def tts_output(self,answer):
         self.tts_client.cancel_goal()
@@ -137,10 +140,16 @@ class ARIHeadFollower:
             print(e)
             print("Transform not published yet")
 
+    def action (self,goal):
+        return self.track_user()
+
+    def preempted(self):
+        #Cancel CURRENT GOAL
+        pass
 
     def track_user(self):
 
-        while not rospy.is_shutdown():            
+        #while not rospy.is_shutdown(): #and not self.stop:            
             try:
                 if len(self.hri_listener.bodies) > 0 and (not self.stop): # are bodies detected?
                     # Get transform from head_camera_link to detected body
@@ -210,16 +219,20 @@ class ARIHeadFollower:
                     else:
                         self.approach(bodies.frame)
 
+                if self.stop:
+                    self.stop = False
+                    return "Success"
+                        
+                return "Working"
+            
             except Exception as e:
                 rospy.logwarn(f"Could not transform: {e}")
+                return "Working"
 
 
 if __name__ == "__main__":
     rospy.init_node("follow_user")
-    follower = ARIHeadFollower()
-    follower.track_user()
-
-
+    server = StatusUpdate(rospy.get_name(),ARIHeadFollower)
 
 
 
