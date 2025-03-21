@@ -14,6 +14,9 @@ class ChatboxARI:
     def __init__(self):
         rospy.init_node("chatbox_ari")
         self.rate = rospy.Rate(1)
+        self.listen = True
+
+        self.brain_state_data = "Busy"
         self.intents_action_split = {"greet":[False,False],"remember user":[False,True],"goodbye":[False,False],"follow user":[True,False],"provide information":[False,False],"find object":[True,True],"go to":[True,True],"explore":[True,False],"translate":[True,True],"other":False}
         self.intents_description  = [
             "greet: The robot needs to greet the person. The user does not provided his/her name", 
@@ -76,7 +79,7 @@ class ChatboxARI:
     #        self.asr_result(user_input)
 
     def brain_state(self,state):
-        return state
+        self.brain_state_data = state.data
 
     def asr_result(self, msg):
         """ Recognize speech. """
@@ -87,11 +90,12 @@ class ChatboxARI:
         
         rospy.loginfo(f"User said: {sentence}")
         # Query DeepSeek with the user input
-        response = self.query_deepseek(sentence)
+        if self.listen:
+            response = self.query_deepseek(sentence)
 
         # Output the response through TTS
-        if response:
-            self.tts_output(response)
+        #if response:
+        #    self.tts_output(response)
 
     def ask_ollama(self,promt,msg):
         completion = self.api.chat(
@@ -180,24 +184,28 @@ class ChatboxARI:
                     intent_result =""
                 
                 #Publish the speech
+                self.listen = False
                 intent_dictionary = {"intent":"speech","input":response}
                 json_string = json.dumps(intent_dictionary)
                 self.dictionary_pub.publish(json_string)        
                 print(json_string)
                 rospy.loginfo(f"DeepSeek Response: {response}")
-
-                # Waiting fot 
-                while self.brain_state != "idle":
+                
+                while self.brain_state_data != "Idle":
                     rospy.loginfo("Waiting for brain")
                     self.rate.sleep()
+
+                # Waiting for brain
+                if intent_result != "greet" and intent_result != "goodbye" and intent_result != "provide information":
                 
-                #Publish the intent
-                if intent_result != "greet" and intent_result != "goodbye":
+                    #Publish the intent
                     intent_dictionary = {"intent":intent_result,"input":parameter}
                     json_string = json.dumps(intent_dictionary)
                     self.dictionary_pub.publish(json_string)        
                     print(json_string)
                     #rospy.loginfo(f"DeepSeek Response: {response}")
+                
+                self.listen = True
             
             return response
             

@@ -18,6 +18,8 @@ class ARI:
         self.timeout = rospy.get_param("~timeout",10)
 
         self.person_found_sub   = rospy.Subscriber('person_looking_at_robot', String, self.person_found_cb, queue_size=10)
+        self.brain_state_pub    = rospy.Publisher('/brain/state',String,queue_size=10)
+
         self._as_go_to_location = actionlib.SimpleActionClient("/nav_move_base_server",brain.BrainAction)
         self._as_text_speech    = actionlib.SimpleActionClient("/text_speech",brain.BrainAction)
         self._as_find_speaker   = actionlib.SimpleActionClient("/ari_turn_to_speaker",brain.BrainAction)
@@ -64,6 +66,7 @@ class ARI:
             self.current_intent = "stop"
             self.idle({}) #Take any actions needed for it to be idling
 
+        self.brain_state_pub.publish(self.current_state)
         rospy.loginfo("State: "+ self.current_state + " | Current Action: " + self.current_intent + " | Result: " + self.last_result + " | Intent: " + intent)
     
     def stop (self,input):
@@ -97,7 +100,7 @@ class ARI:
             rospy.loginfo(input)
             ActionGoal = brain.BrainGoal()
             ActionGoal.goal = input["input"]
-            self._as_go_to_location.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
+            self._as_text_speech.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
         else:
             self.last_result = "Failure"
 
