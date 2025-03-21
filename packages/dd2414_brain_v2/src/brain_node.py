@@ -47,6 +47,7 @@ class ARI:
         self.response_msg = response_msg.data
 
     def run_action(self,intent,input):
+        result = ""
         if intent == "stop": #Give Priority to the Stop Action
             self.current_intent = "stop"
             self.current_state = "Idle"
@@ -55,14 +56,18 @@ class ARI:
         elif self.current_state == "Idle" and intent in self.action_dict: #If Robot is Idle and the requested action is valid
             self.current_intent = intent #Save the Current action
             self.current_state = "Busy"
+            self.brain_state_pub.publish(self.current_state)
+            self.last_result = ""
             self.action_dict[self.current_intent](input)
 
         elif self.current_state == "Busy" and self.last_result == "Working": #If robot is Working on the task at hand call the function to ask for an update
             #self.action_dict[self.current_intent](input)
+            self.brain_state_pub.publish(self.current_state)
             pass
 
         elif self.current_state == "Busy" and self.last_result == "Success": #If the robot just recieved a Success result from the action it was performing; we could skip this state transition to have it directly go into idle
             self.current_state = "Success"
+            self.brain_state_pub.publish(self.current_state)
             if self.current_intent == "greet":
                 rospy.loginfo("Name sent to LLM: " + json.dumps(self.last_data))
                 self.brain_user_name_pub.publish(self.last_data["name"])
@@ -70,16 +75,22 @@ class ARI:
 
         elif self.current_state == "Busy" and self.last_result == "Failure": #If the robot just recieved a Success result from the action it was performing; we could skip this state transition to have it directly go into idle
             self.current_state = "Idle"
+            self.brain_state_pub.publish(self.current_state)
             self.current_intent = "stop"
             self.action_dict["stop"]({})
 
         elif self.current_state == "Success" and self.last_result == "Success": #Its just the next state after success
             self.current_state = "Idle"
+            self.brain_state_pub.publish(self.current_state)
             self.current_intent = "stop"
             self.idle({}) #Take any actions needed for it to be idling
+            result = "Success"
+        else:
+           self.brain_state_pub.publish(self.current_state)
 
-        self.brain_state_pub.publish(self.current_state)
+
         rospy.loginfo("State: "+ self.current_state + " | Current Action: " + self.current_intent + " | Result: " + self.last_result + " | Intent: " + intent)
+        return result
     
     def stop (self,input):
         result = "Success"
@@ -128,7 +139,6 @@ class ARI:
     def text_to_speech(self,input):
         if self._as_text_speech.wait_for_server(rospy.Duration(self.timeout)):
         #Change this for the string input.goal
-            rospy.loginfo(input)
             rospy.loginfo("TEXT TO SPEECH")
             ActionGoal = brain.BrainGoal()
             ActionGoal.goal = input["input"]
@@ -173,7 +183,7 @@ class ARI:
                 rospy.loginfo(input)
                 ActionGoal = brain.BrainGoal()
                 ActionGoal.goal = "unknown"
-                self._as_go_to_location.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
+                self._as_save_name.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
             #wait = self._as_go_to_location.wait_for_result()
             #result = self._as_go_to_location.get_result()
         else:
@@ -201,8 +211,10 @@ class Brain:
         self.intent = self.intent_dict["intent"]
 
     def run(self):
-        self.robot.run_action(self.intent,self.intent_dict)
-        self.intent = ""
+        result = self.robot.run_action(self.intent,self.intent_dict)
+        if result == "Success":
+            self.intent = ""
+        
 
     def shutdown (self):
         rospy.loginfo("Shutting Down Brain Node")

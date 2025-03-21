@@ -48,8 +48,8 @@ class StatusUpdate:
             if self._result.result == "Success":
                 
                 rospy.loginfo("Action Server " + self._action_name + " Succeded.")
-                self._as.set_succeeded(self.self._result)
+                self._as.set_succeeded(self._result)
             else:
                 self.self._result.result = "Failure"
                 rospy.loginfo("Action Server " + self._action_name + " Aborted.")
-                self._as.set_aborted(self.self._result)
+                self._as.set_aborted(self._result)

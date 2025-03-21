@@ -51,7 +51,7 @@ class FaceRecognitionNode:
                 self.add_name_to_face(self.target_name)
 
                 # Return name that was saved
-                result.in_dic = self.target_name
+                result.in_dic = json.dumps({"name" : self.target_name})
 
             
             else:
@@ -60,7 +60,7 @@ class FaceRecognitionNode:
 
                 # Return name if we know it
                 if name:
-                    result.in_dic = name
+                    result.in_dic = json.dumps({"name" : name })
                 else:
                     result.in_dic = json.dumps({"name" : "unknown" })
 
