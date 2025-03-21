@@ -215,5 +215,4 @@ class BodyOrientationListener:
 
 if __name__=="__main__":
     rospy.init_node("body_orientation_listener")
-    bol = BodyOrientationListener(threshold=20)
-    bol.run()
+    server = StatusUpdate(rospy.get_name(),BodyOrientationListener(threshold=20))
