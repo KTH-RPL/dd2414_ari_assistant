@@ -4,5 +4,6 @@
   <node name="ari_brain_v2" pkg="dd2414_brain_v2" type="brain_node.py"/>
 
   <include file="$(find dd2414_speech)/launch/find_speaker.launch"/>
+  <node name="look_at_person" pkg="dd2414_human_detection" type="look_at_person.py">
 
 </launch>
