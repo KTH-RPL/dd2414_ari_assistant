@@ -43,8 +43,6 @@ class ARI:
             self.action_dict["stop"]({})
 
         elif self.current_state == "Idle" and intent in self.action_dict: #If Robot is Idle and the requested action is valid
-            if not self.person_looking_at_ari:
-                self.action_dict["find speaker"]()
             self.current_intent = intent #Save the Current action
             self.current_state = "Busy"
             self.action_dict[self.current_intent](input)
@@ -63,6 +61,7 @@ class ARI:
 
         elif self.current_state == "Success" and self.last_result == "Success": #Its just the next state after success
             self.current_state = "Idle"
+            self.current_intent = "stop"
             self.idle({}) #Take any actions needed for it to be idling
 
         rospy.loginfo("State: "+ self.current_state + " | Current Action: " + self.current_intent + " | Result: " + self.last_result + " | Intent: " + intent)
@@ -93,7 +92,7 @@ class ARI:
         
     
     def person_found_cb(self,msg):
-        self.person_looking_at_ari = msg.data
+        self.person_looking_at_ari = msg.data != ""
 
     def go_to_location(self,input):
         if self._as_go_to_location.wait_for_server(rospy.Duration(self.timeout)):
@@ -109,12 +108,15 @@ class ARI:
 
     def find_speaker(self, input):
         if self._as_find_speaker.wait_for_server(rospy.Duration(self.timeout)):
+            rospy.loginfo("FIND SPEAKER")
             ActionGoal = brain.BrainGoal()
             self._as_find_speaker.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
         else:
             self.last_result = "Failure"
 
     def follow_user(self, input):
+        if not self.person_looking_at_ari:
+            self.action_dict["find speaker"]({})
         if self._as_follow_user.wait_for_server(rospy.Duration(self.timeout)):
             self._as_follow_user.wait_for_server()
             ActionGoal = brain.BrainGoal()
