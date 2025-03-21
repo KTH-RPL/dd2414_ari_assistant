@@ -17,11 +17,14 @@ class ARI:
 
         self.timeout = rospy.get_param("~timeout",10)
 
-        self.person_found_sub = rospy.Subscriber('person_looking_at_robot', String, self.person_found_cb, queue_size=10)
+        self.person_found_sub   = rospy.Subscriber('person_looking_at_robot', String, self.person_found_cb, queue_size=10)
+        self.brain_state_pub    = rospy.Publisher('/brain/state',String,queue_size=10)
+
         self._as_go_to_location = actionlib.SimpleActionClient("/nav_move_base_server",brain.BrainAction)
-        self._as_find_speaker = actionlib.SimpleActionClient("/find_speaker",brain.BrainAction)
+        self._as_text_speech    = actionlib.SimpleActionClient("/text_speech",brain.BrainAction)
         self._as_save_name = actionlib.SimpleActionClient("/face_recognition_node", brain.BrainAction)
-        self._as_follow_user = actionlib.SimpleActionClient("/follow_user",brain.BrainAction)
+        self._as_find_speaker   = actionlib.SimpleActionClient("/ari_turn_to_speaker",brain.BrainAction)
+        self._as_follow_user    = actionlib.SimpleActionClient("/follow_user",brain.BrainAction)
 
 
         #To Add More Behaviors just add them to this dictionary and then add the corresponding function
@@ -30,7 +33,8 @@ class ARI:
                             "name"                 :self.name_assign,
                             "go to"                :self.go_to_location,
                             "find speaker"         :self.find_speaker,
-                            "follow user"          :self.follow_user
+                            "follow user"          :self.follow_user,
+                            "speech"               :self.text_to_speech
                             }
         
     def response_cb(self,response_msg):
@@ -64,6 +68,7 @@ class ARI:
             self.current_intent = "stop"
             self.idle({}) #Take any actions needed for it to be idling
 
+        self.brain_state_pub.publish(self.current_state)
         rospy.loginfo("State: "+ self.current_state + " | Current Action: " + self.current_intent + " | Result: " + self.last_result + " | Intent: " + intent)
     
     def stop (self,input):
@@ -93,6 +98,16 @@ class ARI:
     
     def person_found_cb(self,msg):
         self.person_looking_at_ari = msg.data != ""
+
+    def text_to_speech(self,input):
+        if self._as_text_speech.wait_for_server(rospy.Duration(self.timeout)):
+        #Change this for the string input.goal
+            rospy.loginfo(input)
+            ActionGoal = brain.BrainGoal()
+            ActionGoal.goal = input["input"]
+            self._as_text_speech.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
+        else:
+            self.last_result = "Failure"
 
     def go_to_location(self,input):
         if self._as_go_to_location.wait_for_server(rospy.Duration(self.timeout)):
