@@ -59,6 +59,7 @@ class ARI:
 
         elif self.current_state == "Success" and self.last_result == "Success": #Its just the next state after success
             self.current_state = "Idle"
+            self.current_intent = "stop"
             self.idle({}) #Take any actions needed for it to be idling
 
         rospy.loginfo("State: "+ self.current_state + " | Current Action: " + self.current_intent + " | Result: " + self.last_result + " | Intent: " + intent)
@@ -111,13 +112,12 @@ class ARI:
     def follow_user(self, input):
         if not self.person_looking_at_ari:
             self.action_dict["find speaker"]({})
+        if self._as_follow_user.wait_for_server(rospy.Duration(self.timeout)):
+            self._as_follow_user.wait_for_server()
+            ActionGoal = brain.BrainGoal()
+            self._as_follow_user.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
         else:
-            if self._as_follow_user.wait_for_server(rospy.Duration(self.timeout)):
-                self._as_follow_user.wait_for_server()
-                ActionGoal = brain.BrainGoal()
-                self._as_follow_user.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
-            else:
-                self.last_result = "Failure"
+            self.last_result = "Failure"
 
 
 #Dont MOVE ANYTING FROM HERE

@@ -64,8 +64,8 @@ class BodyOrientationListener:
                 if np.arccos(b2r_translation_x/b2r_xy_norm) < (self.threshold/180*np.pi) and b2r_translation_x > 0:
 
                     bodies_facing_robot.append(body[0])
-                    print("namespace: ", body[1].ns)
-                    print("body: ", body[1])
+                    #print("namespace: ", body[1].ns)
+                    #print("body: ", body[1])
                     self.id_pub.publish((body[0]))
             
             if(len(bodies_facing_robot) == 0):
