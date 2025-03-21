@@ -187,8 +187,6 @@ if __name__ == '__main__':
         rospy.logerr("ROS Node interrupted.")
 
 
-
-
  #completion = self.api.chat(
             #    model=self.model_ollama, 
             #    messages=[
