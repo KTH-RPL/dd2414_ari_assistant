@@ -9,6 +9,7 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from tf import transformations as t
 import math
 import numpy as np
+import dd2414_brain_v2.msg as brain
         
 
 class MoveBase:
@@ -18,12 +19,15 @@ class MoveBase:
                               "table" :(-1.0    , -1.0)}
         
     def action(self,goal):
+        result = brain.BrainResult()
         if goal.goal in self.location_dict:
             position = self.location_dict[goal.goal]
-            result = self.nav_move_base(position[0],position[1])
-            return result
+            result.result = self.nav_move_base(position[0],position[1])
+            
         else:
-            return "Failure"
+            result.result = "Failure"
+
+        return result
 
     def preempted(self):
         pass

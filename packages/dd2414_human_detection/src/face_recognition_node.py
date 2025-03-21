@@ -40,7 +40,7 @@ class FaceRecognitionNode:
         This function will execute when it receives a goal from the brain. It will contain a string (goal.goal)
         which indicates the name of the person we are currently seeing. 
         """
-        result = brain.BrainActionResult()
+        result = brain.BrainResult()
 
         if goal.goal:
             self.target_name = goal.goal
@@ -62,9 +62,10 @@ class FaceRecognitionNode:
                 if name:
                     result.in_dic = name
                 else:
-                    result.in_dic = "unknown"
+                    result.in_dic = json.dumps({"name" : "unknown" })
 
             result.result = "Success"
+            rospy.loginfo(result)
             return result
 
 
@@ -128,7 +129,7 @@ class FaceRecognitionNode:
             match_id = self.find_matching_face(encoding)
             
             if match_id:
-                rospy.loginfo(f"Recognized face {face_id} as {match_id}")
+                # rospy.loginfo(f"Recognized face {face_id} as {match_id}")
                 self.current_id = match_id
             else:
                 name = None
@@ -145,7 +146,7 @@ class FaceRecognitionNode:
         if len(self.known_faces["encodings"]) == 0:
             return None
         
-        matches = face_recognition.compare_faces(self.known_faces["encodings"], encoding, tolerance = 0.4)
+        matches = face_recognition.compare_faces(self.known_faces["encodings"], encoding, tolerance = 0.6)
         if True in matches:
             return self.known_faces["ids"][matches.index(True)]
         return None
@@ -198,16 +199,16 @@ class FaceRecognitionNode:
 
             # Search body ID
             body_id = None
-            print("Temporal:",temporal_face_id)
+            #print("Temporal:",temporal_face_id)
             for id, person in self.hri_listener.tracked_persons.items():
-                rospy.loginfo("Detected personID %s with matching: faceID: %s, bodyID: %s, voiceID: %s",
+                #rospy.loginfo("Detected personID %s with matching: faceID: %s, bodyID: %s, voiceID: %s",
 
-                          id, person.face_id, person.body_id, person.voice_id)
+                        #  id, person.face_id, person.body_id, person.voice_id)
                 if person.face_id == temporal_face_id:
-                    print("Match:",person.face_id)
-                    print("Body:",person.body_id)
+                   # print("Match:",person.face_id)
+                    #print("Body:",person.body_id)
                     body_id = person.body_id
-                    rospy.loginfo(f"Found body_id: {body_id}")
+                    #rospy.loginfo(f"Found body_id: {body_id}")
                     break
             if body_id: # and name:
                 topic_name = f"/humans/bodies/{body_id}/position"

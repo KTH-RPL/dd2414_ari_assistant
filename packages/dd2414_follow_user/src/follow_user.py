@@ -18,6 +18,7 @@ from control_msgs.msg import FollowJointTrajectoryActionGoal, PointHeadActionGoa
 from geometry_msgs.msg import PointStamped, Point
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from dd2414_status_update import StatusUpdate
+import dd2414_brain_v2.msg as brain
 from pal_interaction_msgs.msg import TtsAction, TtsGoal
 
 
@@ -217,16 +218,21 @@ class ARIHeadFollower:
 
                     else:
                         self.approach(bodies.frame)
-
+                result = brain.BrainResult()
+                
                 if self.stop:
                     self.stop = False
-                    return "Success"
-                        
-                return "Working"
+                    result.result = "Success"
+                    return result
+
+                result.result = "Working"        
+                return result
             
             except Exception as e:
                 rospy.logwarn(f"Could not transform: {e}")
-                return "Working"
+                result = brain.BrainResult()
+                result.result = "Working"
+                return result
 
 
 if __name__ == "__main__":

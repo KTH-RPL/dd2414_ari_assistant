@@ -15,10 +15,13 @@ class ARI:
         self.last_result = "Success"
         self.current_intent = "stop"
 
+        self.person_looking_at_ari = ""
         self.timeout = rospy.get_param("~timeout",10)
 
         self.person_found_sub   = rospy.Subscriber('person_looking_at_robot', String, self.person_found_cb, queue_size=10)
         self.brain_state_pub    = rospy.Publisher('/brain/state',String,queue_size=10)
+        self.brain_user_name_pub    = rospy.Publisher('/brain/user_name',String,queue_size=10)
+
 
         self._as_go_to_location = actionlib.SimpleActionClient("/nav_move_base_server",brain.BrainAction)
         self._as_text_speech    = actionlib.SimpleActionClient("/text_speech",brain.BrainAction)
@@ -27,14 +30,17 @@ class ARI:
         self._as_follow_user    = actionlib.SimpleActionClient("/follow_user",brain.BrainAction)
 
 
+
         #To Add More Behaviors just add them to this dictionary and then add the corresponding function
         self.action_dict= {
                             "stop"                 :self.stop,
-                            "name"                 :self.name_assign,
+                            "remember user"        :self.name_assign,
                             "go to"                :self.go_to_location,
                             "find speaker"         :self.find_speaker,
                             "follow user"          :self.follow_user,
-                            "speech"               :self.text_to_speech
+                            "speech"               :self.text_to_speech,
+                            "greet"                :self.greet,
+                            "goodbye"              :self.greet
                             }
         
     def response_cb(self,response_msg):
@@ -57,6 +63,10 @@ class ARI:
 
         elif self.current_state == "Busy" and self.last_result == "Success": #If the robot just recieved a Success result from the action it was performing; we could skip this state transition to have it directly go into idle
             self.current_state = "Success"
+            if self.current_intent == "greet":
+                rospy.loginfo("Name sent to LLM: " + json.dumps(self.last_data))
+                self.brain_user_name_pub.publish(self.last_data["name"])
+
 
         elif self.current_state == "Busy" and self.last_result == "Failure": #If the robot just recieved a Success result from the action it was performing; we could skip this state transition to have it directly go into idle
             self.current_state = "Idle"
@@ -83,17 +93,33 @@ class ARI:
     
     def cb_done(self,state,result):
         self.last_result=result.result
+        #rospy.loginfo(result)
+        if result.in_dic != '':
+            self.last_data = json.loads(result.in_dic)
+        else:
+            self.last_data = {}
 
     def cb_feedback(self,feedback):
         self.last_result=feedback.feedback
+        #rospy.loginfo(feedback)
+        if feedback.in_dic != '':
+            self.last_data = json.loads(feedback.in_dic)
+        else:
+            self.last_data = {}
 
     def cb_active(self):
         self.last_result = "Working"
+        
 
     def name_assign(self,input):
-        self._as_save_name.wait_for_server()
-        goal = brain.BrainActionGoal(goal = "Laura")
-        self._as_save_name.send_goal(goal, done_cb = self.cb_done, active_cb = self.cb_active, feedback_cb = self.cb_feedback)
+        if self._as_save_name.wait_for_server(rospy.Duration(self.timeout)):
+            rospy.loginfo(input)
+            ActionGoal = brain.BrainGoal()
+            ActionGoal.goal = input["input"]
+            self._as_save_name.send_goal(ActionGoal, done_cb = self.cb_done, active_cb = self.cb_active, feedback_cb = self.cb_feedback)
+        else:
+            self.last_result = "Failure"
+            self.last_data = {}
         
     
     def person_found_cb(self,msg):
@@ -103,6 +129,7 @@ class ARI:
         if self._as_text_speech.wait_for_server(rospy.Duration(self.timeout)):
         #Change this for the string input.goal
             rospy.loginfo(input)
+            rospy.loginfo("TEXT TO SPEECH")
             ActionGoal = brain.BrainGoal()
             ActionGoal.goal = input["input"]
             self._as_text_speech.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
@@ -138,6 +165,22 @@ class ARI:
             self._as_follow_user.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
         else:
             self.last_result = "Failure"
+
+    def greet(self, input):
+        if not self.person_looking_at_ari:
+            self.action_dict["find speaker"]({})
+        if self._as_save_name.wait_for_server(rospy.Duration(self.timeout)):
+                rospy.loginfo(input)
+                ActionGoal = brain.BrainGoal()
+                ActionGoal.goal = "unknown"
+                self._as_go_to_location.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
+            #wait = self._as_go_to_location.wait_for_result()
+            #result = self._as_go_to_location.get_result()
+        else:
+            self.last_result = "Failure"
+
+
+
 
 
 #Dont MOVE ANYTING FROM HERE

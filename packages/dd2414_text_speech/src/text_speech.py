@@ -6,6 +6,7 @@ from std_msgs.msg import String
 from actionlib_msgs.msg import GoalStatus
 from dd2414_status_update import StatusUpdate
 from pal_interaction_msgs.msg import TtsAction, TtsGoal
+import dd2414_brain_v2.msg as brain 
 
 
 
@@ -22,15 +23,18 @@ class TextSpeech:
         pass
 
     def tts_output(self, sentence):
+        
         """ Output the response through TTS. """
+        result = brain.BrainResult()
         goal = TtsGoal()
         goal.rawtext.lang_id = self.language
         goal.rawtext.text = sentence
         self.tts_client.send_goal_and_wait(goal)
         if self.tts_client.get_state() == GoalStatus.SUCCEEDED:
-            return "Success"
+            result.result = "Success"
         else:
-            return "Failure"
+            result.result = "Failure"
+        return result
 
 if __name__=="__main__":
     rospy.init_node('text_speech')
