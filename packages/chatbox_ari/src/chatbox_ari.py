@@ -13,6 +13,7 @@ from ollama import Client
 class ChatboxARI:
     def __init__(self):
         rospy.init_node("chatbox_ari")
+        self.rate = rospy.Rate(1)
         self.intents_action_split = {"greet":[False,False],"remember user":[False,True],"goodbye":[False,False],"follow user":[True,False],"provide information":[False,False],"find object":[True,True],"go to":[True,True],"explore":[True,False],"translate":[True,True],"other":False}
         self.intents_description  = [
             "greet: The robot needs to greet the person. The user does not provided his/her name", 
@@ -56,6 +57,9 @@ class ChatboxARI:
         # Subscribe to ASR topic
         self.asr_sub = rospy.Subscriber('/humans/voices/anonymous_speaker/speech',LiveSpeech,self.asr_result)
 
+        # Subscribe to brain state topic
+        self.brain_sub = rospy.Subscriber('/brain/state',String,self.brain_state)
+
         # Set up PAL Robotics TTS
         self.tts_client = SimpleActionClient("/tts", TtsAction)
         self.tts_client.wait_for_server()
@@ -70,6 +74,9 @@ class ChatboxARI:
     #    while user_input != "stop":
     #        user_input = input("Insert sentence: ")
     #        self.asr_result(user_input)
+
+    def brain_state(self,state):
+        return state
 
     def asr_result(self, msg):
         """ Recognize speech. """
@@ -114,15 +121,28 @@ class ChatboxARI:
                         
             parameter = parameter[1]
 
+            if len(parameter.split()) > 2:
+                 return "", self.reject_msg()
+
             if "the" in parameter:
                 parameter = parameter.replace("the ","")
 
             response = response + " Objective: " + parameter
 
         if not self.intents_action_split[intent_result][0]:
+            if intent_result == "remember user":
+                promt = promt + "Use my name in your response, my name is:" + parameter
+
             response = self.ask_ollama(promt,user_input)
             
         return parameter, response
+    
+    def reject_msg(self):
+
+        return "I could not understand, please say it again"
+    
+    def pub_dictionary(self):
+        pass
 
 
     def query_deepseek(self, user_input):
@@ -152,19 +172,32 @@ class ChatboxARI:
             rospy.loginfo(f"intent: {intent_result}") 
             if intent_result == "No match found" or intent_result == "other":
                 ## ASK USER TO SAY AGAIN 
-                response = "I could not understand, please say it again"
+                response = self.reject_msg()
 
             else:
                 parameter, response = self.process_intent(intent_ollama,intent_result,user_input)
                 if response == "":
                     intent_result =""
                 
-                #Publish the intent
-                intent_dictionary = {"intent":intent_result,"input":parameter}
+                #Publish the speech
+                intent_dictionary = {"intent":"speech","input":response}
                 json_string = json.dumps(intent_dictionary)
                 self.dictionary_pub.publish(json_string)        
                 print(json_string)
                 rospy.loginfo(f"DeepSeek Response: {response}")
+
+                # Waiting fot 
+                while self.brain_state != "idle":
+                    rospy.loginfo("Waiting for brain")
+                    self.rate.sleep()
+                
+                #Publish the intent
+                if intent_result != "greet" and intent_result != "goodbye":
+                    intent_dictionary = {"intent":intent_result,"input":parameter}
+                    json_string = json.dumps(intent_dictionary)
+                    self.dictionary_pub.publish(json_string)        
+                    print(json_string)
+                    #rospy.loginfo(f"DeepSeek Response: {response}")
             
             return response
             

@@ -29,7 +29,8 @@ class ARI:
                             "name"                 :self.name_assign,
                             "go to"                :self.go_to_location,
                             "find speaker"         :self.find_speaker,
-                            "follow user"          :self.follow_user
+                            "follow user"          :self.follow_user,
+                            "speech"               :self.text_to_speech
                             }
         
     def response_cb(self,response_msg):
