@@ -171,9 +171,9 @@ class ARIHeadFollower:
 
                         head_goal = PointHeadActionGoal()
                         head_goal.goal.target.header.frame_id = "base_link"
-                        point = Point(x=t_bodies[0], y=t_bodies[1], z=t_bodies[2]-0.10)
-                        head_goal.goal.pointing_axis.x = 1.0
-                        head_goal.goal.pointing_axis.y = 0.0
+                        point = Point(x=t_bodies[0], y=t_bodies[1], z=t_bodies[2])
+                        head_goal.goal.pointing_axis.x = 0.0
+                        #head_goal.goal.pointing_axis.y = 0.0
                         head_goal.goal.pointing_frame = "sellion_link"
 
                         angle = math.atan2(point.y,point.x)

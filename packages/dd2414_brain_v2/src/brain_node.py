@@ -68,7 +68,7 @@ class ARI:
         elif self.current_state == "Busy" and self.last_result == "Success": #If the robot just recieved a Success result from the action it was performing; we could skip this state transition to have it directly go into idle
             self.current_state = "Success"
             self.brain_state_pub.publish(self.current_state)
-            if self.current_intent == "greet":
+            if self.current_intent == "greet" and "name" in self.last_data:
                 rospy.loginfo("Name sent to LLM: " + json.dumps(self.last_data))
                 self.brain_user_name_pub.publish(self.last_data["name"])
 
@@ -104,6 +104,7 @@ class ARI:
     
     def cb_done(self,state,result):
         self.last_result=result.result
+        #rospy.loginfo(self.current_intent)
         #rospy.loginfo(result)
         if result.in_dic != '':
             self.last_data = json.loads(result.in_dic)
@@ -124,7 +125,7 @@ class ARI:
 
     def name_assign(self,input):
         if self._as_save_name.wait_for_server(rospy.Duration(self.timeout)):
-            rospy.loginfo(input)
+            #rospy.loginfo(input)
             ActionGoal = brain.BrainGoal()
             ActionGoal.goal = input["input"]
             self._as_save_name.send_goal(ActionGoal, done_cb = self.cb_done, active_cb = self.cb_active, feedback_cb = self.cb_feedback)
@@ -177,16 +178,23 @@ class ARI:
             self.last_result = "Failure"
 
     def greet(self, input):
+        #Turns to Look at the speaker
         if not self.person_looking_at_ari:
             self.action_dict["find speaker"]({})
+        
+        #Waits for the server to be available
         if self._as_save_name.wait_for_server(rospy.Duration(self.timeout)):
-                rospy.loginfo(input)
+                #rospy.loginfo(input)
                 ActionGoal = brain.BrainGoal()
                 ActionGoal.goal = "unknown"
-                self._as_save_name.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
-            #wait = self._as_go_to_location.wait_for_result()
-            #result = self._as_go_to_location.get_result()
-        else:
+
+                #If it did actually manage to see someone then it tries to recognize the user
+                if self.person_looking_at_ari:
+                    self._as_save_name.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
+                else: #If the turning fails because user moved or it turned to the wrong direction
+                    self.last_result = "Failure"
+                    self.last_data = {"name" : "unknown"}
+        else: #If the service was not available or it timed out
             self.last_result = "Failure"
 
 
