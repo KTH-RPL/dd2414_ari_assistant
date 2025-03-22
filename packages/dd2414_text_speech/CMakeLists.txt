@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(dd2414_speech)
+project(dd2414_text_speech)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -7,13 +7,14 @@ project(dd2414_speech)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED
-            COMPONENTS
-            dd2414_brain_v2
-            actionlib)
-
-
-catkin_package(CATKIN_DEPENDS dd2414_brain_v2)
+find_package(catkin REQUIRED COMPONENTS
+  actionlib
+  hri_msgs
+  pal_interaction_msgs
+  rospy
+  std_msgs
+  dd2414_brain_v2
+)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -72,7 +73,7 @@ catkin_package(CATKIN_DEPENDS dd2414_brain_v2)
 ## Generate added messages and services with any dependencies listed here
 # generate_messages(
 #   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
+#   hri_msgs#   pal_interaction_msgs#   std_msgs
 # )
 
 ################################################
@@ -106,8 +107,8 @@ catkin_package(CATKIN_DEPENDS dd2414_brain_v2)
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES ari_test_package
-#  CATKIN_DEPENDS other_catkin_pkg
+#  LIBRARIES dd2414_text_speech
+  CATKIN_DEPENDS actionlib hri_msgs pal_interaction_msgs rospy std_msgs dd2414_brain_v2
 #  DEPENDS system_lib
 )
 
@@ -119,12 +120,12 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
 # include
-# ${catkin_INCLUDE_DIRS}
+  ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/ari_test_package.cpp
+#   src/${PROJECT_NAME}/dd2414_text_speech.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -135,7 +136,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/ari_test_package_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/dd2414_text_speech_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -161,10 +162,9 @@ include_directories(
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-# catkin_install_python(PROGRAMS
-#   scripts/my_python_script
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+catkin_install_python(PROGRAMS src/text_speech.py
+   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
@@ -199,7 +199,7 @@ include_directories(
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_ari_test_package.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_dd2414_text_speech.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

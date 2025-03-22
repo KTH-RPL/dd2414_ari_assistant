@@ -15,6 +15,8 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   sensor_msgs
   cv_bridge
+  dd2414_brain_v2
+  actionlib
 )
 
 ## System dependencies are found with CMake's conventions
@@ -109,7 +111,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES dd2414_human_detection
-   CATKIN_DEPENDS rospy std_msgs hri_msgs pal_interaction_msgs geometry_msgs sensor_msgs cv_bridge
+   CATKIN_DEPENDS rospy std_msgs hri_msgs pal_interaction_msgs geometry_msgs sensor_msgs cv_bridge dd2414_brain_v2
 #  DEPENDS system_lib
 )
 
@@ -163,12 +165,16 @@ include_directories(
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-  catkin_install_python(PROGRAMS src/detect_people_tutorial.py src/look_at_person.py src/multiple_bodies_detected.py src/face_recognition_node.py
+  catkin_install_python(PROGRAMS src/detect_people_looking_at_ari.py src/look_at_person.py src/multiple_bodies_detected.py src/face_recognition_node.py
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 #   scripts/my_python_script
 #   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
  )
-
+## Install YOLO files
+install(DIRECTORY src/yolov5/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/yolov5
+  FILES_MATCHING PATTERN "*.pt"  # Include weights file
+)
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
 # install(TARGETS ${PROJECT_NAME}_node

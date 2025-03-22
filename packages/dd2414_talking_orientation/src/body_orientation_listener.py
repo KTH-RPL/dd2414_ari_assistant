@@ -6,7 +6,7 @@ import pyhri
 import sys
 import actionlib
 import move_base_msgs.msg
-
+import dd2414_brain_v2.msg as brain
 
 from actionlib import SimpleActionClient
 from actionlib_msgs.msg import GoalStatus
@@ -88,7 +88,7 @@ class Listener(object):
 
 class BodyOrientationListener:
 
-    def __init__(self, base_frame = "head_front_camera_link", threshold=30):
+    def __init__(self, base_frame = "head_front_camera_link", threshold=20):
         self.hri_listener = pyhri.HRIListener()
         self.base_frame = base_frame
         self.threshold = threshold
@@ -136,7 +136,7 @@ class BodyOrientationListener:
         pass
 
     def run(self):
-        
+        result_brain = brain.BrainResult()
         while not rospy.is_shutdown():
             bodies = self.hri_listener.bodies.items()
             bodies_facing_robot = []
@@ -192,22 +192,27 @@ class BodyOrientationListener:
 
                             if result == actionlib.GoalStatus.SUCCEEDED:
                                 rospy.loginfo("Arrived at target!")
-                                return "Success"
+                                result_brain.result = "Success"
+                                return result_brain
                                 
                             else:
                                 rospy.loginfo("Trying right position!")
                                 result = self.nav_move_base(right_trans[0],right_trans[1],0,right_rot[0],right_rot[1],right_rot[2],right_rot[3])
                                 if result == actionlib.GoalStatus.SUCCEEDED:
-                                    return "Success"
+                                    result_brain.result = "Success"
+                                    return result_brain
                                 else:
-                                    return "Failure"
+                                    result_brain.result = "Failure"
+                                    return result_brain
                         else:
                             rospy.loginfo("Transform not available!")
-                            return "Working"
+                            result_brain.result = "Working"
+                            return result_brain
                         
                     except rospy.ROSInterruptException as e:
                         rospy.loginfo(e)
-                        return "Working"
+                        result_brain.result = "Working"
+                        return result_brain
                         
 
             self.rate.sleep()
@@ -215,4 +220,4 @@ class BodyOrientationListener:
 
 if __name__=="__main__":
     rospy.init_node("body_orientation_listener")
-    server = StatusUpdate(rospy.get_name(),BodyOrientationListener(threshold=20))
+    server = StatusUpdate(rospy.get_name(),BodyOrientationListener)
