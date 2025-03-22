@@ -203,9 +203,6 @@ class ChatboxARI:
 
             else:
                 
-                actual_time = rospy.Time.now().to_sec()
-                self.wait_for_brain(actual_time)
-
                 if intent_result == "greet" or intent_result == "goodbye":
                     self.listen = False
                     intent_dictionary = {"intent":intent_result,"input":""}
@@ -229,6 +226,8 @@ class ChatboxARI:
                 self.dictionary_pub.publish(json_string)        
                 print(json_string)
                 rospy.loginfo(f"DeepSeek Response: {response}")
+                actual_time = rospy.Time.now().to_sec()
+                self.wait_for_brain(actual_time)
                 
                 #while self.brain_state_data != "Idle" and (self.brain_msg_time - actual_time) < 1 :
                 #    rospy.loginfo("Waiting for brain")
@@ -236,15 +235,15 @@ class ChatboxARI:
 
                 # Waiting for brain
                 if intent_result != "greet" and intent_result != "goodbye" and intent_result != "provide information":
-                    actual_time = rospy.Time.now().to_sec()
-                    self.wait_for_brain(actual_time)
-
                     #Publish the intent
                     intent_dictionary = {"intent":intent_result,"input":parameter}
                     json_string = json.dumps(intent_dictionary)
                     self.dictionary_pub.publish(json_string)        
                     print(json_string)
                     #rospy.loginfo(f"DeepSeek Response: {response}")
+                    actual_time = rospy.Time.now().to_sec()
+                    self.wait_for_brain(actual_time)
+
                 
                 self.listen = True
             
