@@ -166,7 +166,6 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
   catkin_install_python(PROGRAMS src/detect_people_looking_at_ari.py src/look_at_person.py src/multiple_bodies_detected.py src/face_recognition_node.py
-
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 #   scripts/my_python_script
 #   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
