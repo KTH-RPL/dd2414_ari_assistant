@@ -17,6 +17,7 @@ class ARI:
 
         self.person_looking_at_ari = ""
         self.timeout = rospy.get_param("~timeout",10)
+        self.look_at_person_enable = True
 
         self.person_found_sub   = rospy.Subscriber('person_looking_at_robot', String, self.person_found_cb, queue_size=10)
         self.brain_state_pub    = rospy.Publisher('/brain/state',String,queue_size=10)
@@ -28,6 +29,7 @@ class ARI:
         self._as_find_speaker   = actionlib.SimpleActionClient("/ari_turn_to_speaker",brain.BrainAction)
         self._as_follow_user    = actionlib.SimpleActionClient("/follow_user",brain.BrainAction)
         self._as_move_to_person = actionlib.SimpleActionClient("/body_orientation_listener",brain.BrainAction)
+        self._as_look_at_pèrson = actionlib.SimpleActionClient("/face_gaze_tracker",brain.BrainAction)
 
 
         #To Add More Behaviors just add them to this dictionary and then add the corresponding function
@@ -59,6 +61,11 @@ class ARI:
             self.current_state = "Busy"
             self.brain_state_pub.publish(self.current_state)
             self.last_result = ""
+
+            if intent in ("follow user","go to","provide information","translate","find speaker") and self.look_at_person_enable:
+                self.look_at_person({"input":"stop"})
+            elif not self.look_at_person_enable:
+                self.look_at_person({"input":"start"})
             self.action_dict[self.current_intent](input)
 
         elif self.current_state == "Busy" and self.last_result == "Working": #If robot is Working on the task at hand call the function to ask for an update
@@ -177,7 +184,7 @@ class ARI:
         else:
             self.last_result = "Failure"
 
-    def move_to_person(self):
+    def move_to_person(self,input):
         if self._as_move_to_person.wait_for_server(rospy.Duration(self.timeout)):
             ActionGoal = brain.BrainGoal()
             self._as_move_to_person.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
@@ -188,7 +195,7 @@ class ARI:
         if not self.person_looking_at_ari:
             self.action_dict["find speaker"]({})
         if self.person_looking_at_ari :
-            self.move_to_person()
+            self.move_to_person({})
         else:
             self.last_result = "Failure"
         #if move_to_person == "Success" 
@@ -197,7 +204,7 @@ class ARI:
         if not self.person_looking_at_ari:
             self.action_dict["find speaker"]({})
         if self.person_looking_at_ari :
-            self.move_to_person()
+            self.move_to_person({})
         else:
             self.last_result = "Failure"
 
@@ -222,6 +229,16 @@ class ARI:
                     self.last_data = {"name" : "unknown"}
         else: #If the service was not available or it timed out
             self.last_result = "Failure"
+    
+    def look_at_person(self,input):
+        if self._as_look_at_pèrson.wait_for_server(rospy.Duration(self.timeout)):
+            ActionGoal = brain.BrainGoal()
+            ActionGoal.goal = input["input"]
+            self._as_look_at_pèrson.send_goal(ActionGoal)
+            if ActionGoal.goal == "start":
+                self.look_at_person_enable = True 
+            elif ActionGoal.goal == "stop":
+                self.look_at_person_enable = False
 
 
 
@@ -246,7 +263,7 @@ class Brain:
 
     def run(self):
         result = self.robot.run_action(self.intent,self.intent_dict)
-        if result == "Success":
+        if result == "Success" or result == "Failure":
             self.intent = ""
         
 
