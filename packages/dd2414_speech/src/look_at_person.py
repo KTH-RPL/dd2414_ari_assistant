@@ -3,10 +3,13 @@ import rospy
 import pyhri 
 from geometry_msgs.msg import Point, PointStamped
 from dd2414_status_update import StatusUpdate
+import dd2414_brain_v2.msg as brain 
 
 
 class LookAtFace:
     def __init__(self):
+
+        self.result = brain.BrainGoal()
         # HRI Listener for face detection
         self.hri = pyhri.HRIListener()
 
@@ -20,13 +23,18 @@ class LookAtFace:
     def action(self,goal):
         if(goal == "start"):
             self.active = True
-            return "Success"
+            self.result.result = "Success"
+            return self.result
+
         elif(goal == "stop"):
             self.active = False
             self.look_forward()
-            return "Success"
+            self.result.result = "Success"
+            return self.result
+        
         else:
-            return "Failure"
+            self.result.result = "Failure"
+            return self.result
     
     def preempted(self):
         self.active = False
