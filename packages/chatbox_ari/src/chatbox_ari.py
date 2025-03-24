@@ -121,7 +121,7 @@ class ChatboxARI:
         promt     = ". Response with no more than 15 words."
 
         if self.intents_action_split[intent_result][0]:
-            response = "Intializing \"" + intent_result + "\" action."
+            response = "Initializing \"" + intent_result + "\" action."
         
         #if intent_result in ["go to","follow user","find object","explore","translate","remember user"]:
         if self.intents_action_split[intent_result][1] and ":" in intent_ollama:
