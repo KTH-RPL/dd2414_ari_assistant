@@ -48,23 +48,15 @@ class LookAtFace:
             # Select last face
             face = list(faces.values())[-1]
 
-            print('test1')
-
             if(face.valid):
-                print('test2')
                 try:
-                    print('test3')
                     # Get face transform in the head camera frame
                     T = face.transform()
                     trans = T.transform.translation
 
-                    print('test4')
-
                     # Create and publish gaze target
                     target = PointStamped(point=Point(x=trans.x, y=trans.y, z=trans.z), header=T.header)
                     self.look_at_pub.publish(target)
-
-                    print('test5')
 
                 except Exception as e:
                     rospy.logwarn(f"Could not transform face position: {e}")
