@@ -85,84 +85,55 @@ class ChatboxARI:
         self.brain_person_name = msg.data
 
     def asr_result(self,msg):
-        if not msg.final:
+        if not msg.final or not self.listen:
             return
         rospy.loginfo(f"User said: {msg.final}")
-        if (msg.final).lower() == "stop":
+        if msg.final.lower() == "stop":
             self.listen = False
             return
-        if (msg.final).lower()  == "start":
-            self.tts_output("Listening")
+        if msg.final.lower()  == "start":
             self.listen = True
-            return
-        if not self.listen:
             return
         
         response = self.process_user_input(msg.final)
 
     def wait_for_brain(self,actual_time):
-        while (self.brain_state_data != "Idle" ) or (self.brain_state_data == "Idle" and (self.brain_msg_time - actual_time) < 2.2 ): 
+        while (self.brain_state_data != "Idle" ) or (self.brain_state_data == "Idle" and (self.brain_msg_time - actual_time) < 2.1 ): 
             rospy.sleep(1.0)
             rospy.loginfo(f"Waiting for brain: {self.brain_state_data}")
 
         rospy.loginfo(f"State:{self.brain_state_data}, Diff: {self.brain_msg_time - actual_time}")
 
     def ask_ollama(self, msg, promt=""):
-        completion = self.api.chat(
-            model=self.model_ollama, 
-            messages=[
-            {"role":"system","content": self.system_promt + promt},
-            {"role":"user","content": msg},
-            ]
-        )
-
-        return completion.message.content
-    
+        return self.api.chat(model=self.model_ollama, messages=[
+            {"role":"system","content":self.system_promt + promt},
+            {"role":"user","content":msg}
+        ]).message.content
     
     def build_intent_query(self, user_input):
         descriptions = "".join(self.intents_description)
-        """
-        msg = [
-            f"The robot needs to execute one of the following actions: {', '.join(self.intents.keys())}.\n",
-            f"Descriptions: {descriptions}.",
-            f"The user said: {user_input}.\n",
-            "What action did the user expect from the robot?\n",
-            "Return only the best matching option, formatted as following:\n",
-            "If greet: return greet\n",
-            "If goodbye: return goodbye\n",
-            "If remember user: return \"remember user:user_name_provided\"\n",
-            "If provide information: return provide information\n",
-            "If go to: return \"go to:specified_place_by_user\"\n",
-            "If follow user: return follow user\n",
-            "If find object: return \"find object:object_to_find_by_user\"\n",
-            "If explore: return \n",
-            "If translate: return \"translate to:specified_language_by_user\"\n",
-            "If other: return other\n",
-        ]
-        """
-        msg = ["The robot needs to execute one of the following actions:", ' '.join(list(self.intents.keys())), "The description of each action is the following: ", ' '.join(self.intents_description), ".The user said:", str(user_input),"What action did the user expect from the robot?",
-            ".RETURN ONLY the option that best matches from the list provided, DO NOT mention any of the other ones in the response.", 
-            "Additionally If the intent is \"go to\" return \"go to:specified_place\", if it is \"translate\" return \"translate to:specified_language\"", 
-            " if it is \"find object\" return \"find object:object_to_find\"",
-            " if it is \"remember user\" return \"remember user:user_name\""]
-        msg = ' '.join(msg)
-        return msg
+        return (
+            f"The robot needs to execute one of the following actions: {', '.join(self.intents.keys())}.\n"
+            f"Descriptions: {descriptions}."
+            f"The user said: {user_input}.\n"
+            "What action did the user expect from the robot?\n"
+            "Return only the best matching option, formatted as following:\n"
+            "If greet: return greet\n"
+            "If goodbye: return goodbye\n"
+            "If remember user: return \"remember user:user_name\"\n"
+            "If provide information: return provide information\n"
+            "If go to: return \"go to:specified_place\"\n"
+            "If follow user: return follow user\n"
+            "If find object: return \"find object:object_to_find\"\n"
+            "If explore: return \n"
+            "If translate: return \"translate to:specified_language\"\n"
+            "If other: return other\n"
+        )
     
     def extract_intent(self, intent_ollama):
-
-        #for intent in list(self.intents.keys()):
-        #    if intent in intent_ollama.split():
-        #        return intent
-
-        if "greet" in intent_ollama.split():
-            return "greet"
-        else:
-            phrase_words = set(re.findall(r'\b\w+\b', intent_ollama.lower()))  # Tokenize phrase into words
-            for intent in sorted(list(self.intents.keys()), key=len, reverse=True):  # Match longer intents first
-                intent_words = set(intent.lower().split())  # Split intent into words
-                if intent_words.issubset(phrase_words):  # Check if all intent words are in the phrase
-                    return intent
-            
+        for intent in sorted(self.intents.keys(),key=len,reverse=True):
+            if intent in intent_ollama:
+                return intent
         return "No match found"
     
     def process_intent(self, intent_ollama, intent_result, user_input):
@@ -173,7 +144,7 @@ class ChatboxARI:
             response = f"Initializing '{intent_result}' action."
         
         if self.intents[intent_result][1] and ":" in intent_ollama:
-            parameter = intent_ollama.split(":")[-1].strip().lower().replace("the ","").replace("\"","").replace(".","")
+            parameter = intent_ollama.split(":")[-1].strip().lower().replace("the ","")
             response  = response + f" Objective: {parameter}"
 
         if not self.intents[intent_result][0]:
@@ -217,23 +188,20 @@ class ChatboxARI:
     def process_user_input(self, user_input):
         query         = self.build_intent_query(user_input)
         intent_ollama = self.ask_ollama(query)
-        #rospy.loginfo("Intent ollama:",intent_ollama)
-        print(intent_ollama)
+        rospy.loginfo("Intent ollama:",intent_ollama)
         intent_result = self.extract_intent(intent_ollama)
-        print(intent_result)
 
         if intent_result in {"No match found","other"}:
-            response = self.reject_message()
-            self.tts_output(response)
-        else:
-            if intent_result in ["greet","goodbye"]:
-                self.publish_intent(intent_result,"")
+            return self.reject_message()
+        
+        if intent_result in ["greet","goodbye"]:
+            self.publish_intent(intent_result,"")
 
-            parameter, response = self.process_intent(intent_ollama, intent_result, user_input)
-            self.tts_output(response)
+        parameter, response = self.process_intent(intent_ollama, intent_result, user_input)
+        self.tts_output(response)
 
-            if intent_result not in ["greet","goodbye"]:
-                self.publish_intent(intent_result, parameter)
+        if intent_result not in ["greet","goodbye"]:
+            self.publish_intent(intent_result, parameter)
 
         return response
     
