@@ -5,6 +5,7 @@ import rospy
 import math
 import actionlib
 import numpy as np
+import dd2414_brain_v2.msg as brain
 
 from tf import TransformListener
 from tf import transformations as t
@@ -18,7 +19,6 @@ from control_msgs.msg import FollowJointTrajectoryActionGoal, PointHeadActionGoa
 from geometry_msgs.msg import PointStamped, Point
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from dd2414_status_update import StatusUpdate
-import dd2414_brain_v2.msg as brain
 from pal_interaction_msgs.msg import TtsAction, TtsGoal
 
 
