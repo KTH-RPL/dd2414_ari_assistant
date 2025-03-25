@@ -13,7 +13,8 @@ class ARI:
     def __init__(self):
         self.current_state = "Idle"
         self.last_result = ""
-        self.current_intent = "stop"
+        self.current_intent = ""
+        self.emergency_stop = False
 
         self.person_looking_at_ari = ""
         self.timeout = rospy.get_param("~timeout",10)
@@ -51,16 +52,15 @@ class ARI:
 
     def run_action(self,intent,input):
         result = ""
-        #rospy.loginfo("BEFORE State: "+ self.current_state + " | Current Action: " + self.current_intent + " | Result: " + self.last_result + " | Intent: " + intent)
-        if intent == "stop": #Give Priority to the Stop Action
+        rospy.loginfo("BEFORE State: "+ self.current_state + " | Current Action: " + self.current_intent + " | Result: " + self.last_result + " | Intent: " + intent)
+        if intent == "stop" or self.emergency_stop: #Give Priority to the Stop Action
             self.current_intent = "stop"
-            self.current_state = "Idle"
+            self.current_state = "Busy"
             self.action_dict["stop"]({})
 
         elif self.current_state == "Idle" and intent in self.action_dict: #If Robot is Idle and the requested action is valid
             self.current_intent = intent #Save the Current action
             self.current_state = "Busy"
-            self.brain_state_pub.publish(self.current_state)
 
             if intent in ("follow user","go to","provide information","translate","find speaker") and self.look_at_person_enable:
                 self.look_at_person({"input":"stop"})
@@ -69,13 +69,10 @@ class ARI:
             self.action_dict[self.current_intent](input)
 
         elif self.current_state == "Busy" and self.last_result == "Working": #If robot is Working on the task at hand call the function to ask for an update
-            #self.action_dict[self.current_intent](input)
-            self.brain_state_pub.publish(self.current_state)
             pass
 
         elif self.current_state == "Busy" and self.last_result == "Success": #If the robot just recieved a Success result from the action it was performing; we could skip this state transition to have it directly go into idle
             self.current_state = "Done"
-            self.brain_state_pub.publish(self.current_state)
             result = self.last_result
             if self.current_intent == "greet" and "name" in self.last_data:
                 rospy.loginfo("Name sent to LLM: " + json.dumps(self.last_data))
@@ -84,34 +81,27 @@ class ARI:
 
         elif self.current_state == "Busy" and self.last_result == "Failure": #If the robot just recieved a Success result from the action it was performing; we could skip this state transition to have it directly go into idle
             self.current_state = "Done"
-            self.brain_state_pub.publish(self.current_state)
-            self.current_intent = "stop"
-            self.action_dict["stop"]({})
             result = self.last_result
+            
 
         elif self.current_state == "Done" : #Its just the next state after success
             self.current_state = "Idle"
-            self.brain_state_pub.publish(self.current_state)
             self.current_intent = ""
-            self.idle({}) #Take any actions needed for it to be idling
             result = self.last_result
             self.last_result = ""
-        else:
-           self.brain_state_pub.publish(self.current_state)
 
 
-        rospy.loginfo("State: "+ self.current_state + " | Current Action: " + self.current_intent + " | Result: " + self.last_result + " | Intent: " + intent)
+        self.brain_state_pub.publish(self.current_state)
+        rospy.loginfo("AFTER  State: "+ self.current_state + " | Current Action: " + self.current_intent + " | Result: " + self.last_result + " | Intent: " + intent)
         return result
     
     def stop (self,input):
-        result = "Success"
-        #rospy.loginfo("State: "+ self.current_state + " Action: " + "STOP" + " Result: " + result)
-        return "Success"
+        self.last_result = "Success"
+        self.last_data = {}
     
     def idle (self,input):
-        result = "Success"
-        #rospy.loginfo("State: "+ self.current_state + " Action: " + "IDLE" + " Result: " + result)
-        return result
+        self.last_result = "Success"
+        self.last_data = {}
     
     def cb_done(self,state,result):
         self.last_result=result.result
@@ -183,6 +173,7 @@ class ARI:
             self.action_dict["find speaker"]({})
         if self._as_follow_user.wait_for_server(rospy.Duration(self.timeout)):
             ActionGoal = brain.BrainGoal()
+            ActionGoal.goal = "start"
             self._as_follow_user.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
         else:
             self.last_result = "Failure"
@@ -266,8 +257,8 @@ class Brain:
 
     def run(self):
         result = self.robot.run_action(self.intent,self.intent_dict)
-        if result == "Success" or result == "Failure":
-            self.intent = ""
+        #if result == "Success" or result == "Failure":
+        self.intent = ""
         
 
     def shutdown (self):
