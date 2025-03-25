@@ -173,7 +173,6 @@ class ARI:
             self.action_dict["find speaker"]({})
         if self._as_follow_user.wait_for_server(rospy.Duration(self.timeout)):
             ActionGoal = brain.BrainGoal()
-            ActionGoal.goal = "start"
             self._as_follow_user.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
         else:
             self.last_result = "Failure"
