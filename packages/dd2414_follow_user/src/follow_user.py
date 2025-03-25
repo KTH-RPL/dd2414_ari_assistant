@@ -13,13 +13,11 @@ from tf import TransformBroadcaster as tf_B
 from tf import LookupException,ExtrapolationException,ConnectivityException
 from pyhri import HRIListener
 from tf2_ros import Buffer
-from actionlib import SimpleActionClient
 from hri_msgs.msg import LiveSpeech
 from control_msgs.msg import FollowJointTrajectoryActionGoal, PointHeadActionGoal
 from geometry_msgs.msg import PointStamped, Point
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from dd2414_status_update import StatusUpdate
-from pal_interaction_msgs.msg import TtsAction, TtsGoal
 
 
 class ARIHeadFollower:
@@ -27,6 +25,7 @@ class ARIHeadFollower:
         self.hri_listener = HRIListener()
         self.rate  = rospy.Rate(1)
         self.stop  = False
+        self.running = False
         self.br    = tf_B()
         self._tf_buffer = Buffer()
         self._tf_Listener = TransformListener()
@@ -34,11 +33,10 @@ class ARIHeadFollower:
         # Publisher for head movement
         self.look_at_pub  = rospy.Publisher("/look_at",PointStamped,queue_size=1)
         self.look_at_goal = rospy.Publisher("/head_controller/point_head_action/goal",PointHeadActionGoal,queue_size=1)
-        self.head_pub = rospy.Publisher('/head_controller/follow_joint_trajectory/goal', FollowJointTrajectoryActionGoal, queue_size=1)
+        self.head_pub     = rospy.Publisher('/head_controller/follow_joint_trajectory/goal', FollowJointTrajectoryActionGoal, queue_size=1)
 
         self.asr_sub      = rospy.Subscriber('/humans/voices/anonymous_speaker/speech',LiveSpeech, self.asr_result)
-        self.tts_client   = SimpleActionClient("/tts", TtsAction)
-        self.tts_client.wait_for_server()
+    
         self.language = "en_US"
 
         # Joint limits
@@ -54,19 +52,14 @@ class ARIHeadFollower:
         if sentence.lower() == "stop":
             self.stop = True
             rospy.loginfo("Stoping Following behavior")
-            self.tts_output("Stopping Follow User behavior")
+            result = brain.BrainResult()
+            result.result = "Success"
+            return result
         
         #if sentence.lower() == "follow":
         #    rospy.loginfo("Starting Following behavior")
         #    self.tts_output("Starting Follow User behavior")
         #    self.stop = False
-
-    def tts_output(self,answer):
-        self.tts_client.cancel_goal()
-        goal = TtsGoal()
-        goal.rawtext.lang_id = self.language
-        goal.rawtext.text = str(answer)
-        self.tts_client.send_goal_and_wait(goal)
 
     def map_range(self, value, in_min, in_max, out_min, out_max):
         """ Maps a value from one range to another """
@@ -142,6 +135,9 @@ class ARIHeadFollower:
             print("Transform not published yet")
 
     def action (self,goal):
+        if not self.running:
+            self.running =True
+            self.stop = False
         return self.track_user()
 
     def preempted(self):
@@ -149,7 +145,6 @@ class ARIHeadFollower:
         pass
 
     def track_user(self):
-
         #while not rospy.is_shutdown(): #and not self.stop:            
             try:
                 if len(self.hri_listener.bodies) > 0 and (not self.stop): # are bodies detected?
@@ -222,6 +217,8 @@ class ARIHeadFollower:
                 
                 if self.stop:
                     self.stop = False
+                    self.running = False
+                    rospy.loginfo("Returning stop")
                     result.result = "Success"
                     return result
 

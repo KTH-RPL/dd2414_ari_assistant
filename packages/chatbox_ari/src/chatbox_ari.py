@@ -34,17 +34,17 @@ class ChatboxARI:
             "translate"          :[True ,True ],
             "other"              : False      }
         
-        self.intents_description  = (
-            f"greet: The robot needs to greet the person. The user DOES NOT provided his/her name.\n", 
-            f"remember user: The robot needs to remember the name of the person that is taliking. This happens ONLY when the person introduce itself to the robot by saying his/her own name, that is the main difference against the action \"greet\", as an example the user might say: hello my name is David, hi I'm Joshua, etc.\n"
-            f"goodbye: The robot needs to say goodbye to the person.\n",
-            f"provide information: The robot needs to answer a question or explain a topic given by the user.\n",
-            f"go to: The robot needs to move to an specific place. This action can be detonated by asking or demaning, examples: \"Go to the kitchen\", \"Go to the corner\", \"Move 5 meters\".\n",
-            f"follow user: The robot needs to continuously following a person and not just \"go to\" towards them, \"come with me\" is an example of the user asking the robot to folow user.\n", 
-            f"find object: The robot have to start moving around, in order to find the object or person asked. This action can be detonated by asking things like \"Where is the red ball?\" or demaning a search like \"Find a chair\", \"Where is David?\", \"Find Laura\".\n", 
-            f"explore: The has to start moving around to create a map of the place, this action can be detonated by saying things like: \"start exploring\", \"create a map\". \n", 
-            f"translate: The robot has to help the user to translate sentences or a conversation.\n", 
-            f"other: If any of the other actions does not fit, the robot has to classify it as other.\n")
+        self.intents_description  = [
+            "greet: The robot needs to greet the person. The user DOES NOT provided his/her name", 
+            "remember user: The robot needs to remember the name of the person that is taliking. This happens ONLY when the person introduce itself to the robot by saying his/her own name, that is the main difference against the action \"greet\", as an example the user might say: hello my name is David, hi I'm Joshua, etc."
+            "goodbye: The robot needs to say goodbye to the person",
+            "provide information: The robot needs to answer a question or explain a topic given by the user",
+            "go to: The robot needs to move to an specific place. This action can be detonated by asking or demaning, examples: \"Go to the kitchen\", \"Go to the corner\", \"Move 5 meters\" ",
+            "follow user: The robot needs to continuously following a person and not just \"go to\" towards them, \"come with me\" is an example of the user asking the robot to folow user", 
+            "find object: The robot have to start moving around, in order to find the object or person asked. This action can be detonated by asking things like \"Where is the red ball?\" or demaning a search like \"Find a chair\", \"Where is David?\", \"Find Laura\" ", 
+            "explore: The has to start moving around to create a map of the place, this action can be detonated by saying things like: \"start exploring\", \"create a map\" ", 
+            "translate: The robot has to help the user to translate sentences or a conversation", 
+            "other: If any of the other actions does not fit, the robot has to classify it as other"]
         
         self.api          = Client(host="http://192.168.0.106:11434")
         self.system_promt = "You are an office assistant robot caled Ari. Be concise and helpful."
@@ -89,16 +89,18 @@ class ChatboxARI:
             return
         rospy.loginfo(f"User said: {msg.final}")
         if (msg.final).lower() == "stop":
+            self.tts_output("Stopping")
             self.listen = False
+            self.publish_intent("stop","")
             return
-        if (msg.final).lower()  == "start":
+        if (msg.final).lower()  == "start" or (msg.final).lower()  == "init":
             self.tts_output("Listening")
             self.listen = True
             return
         if not self.listen:
             return
         
-        response = self.process_user_input(msg.final)
+        self.process_user_input(msg.final)
 
     def wait_for_brain(self,actual_time):
         while (self.brain_state_data != "Idle" ) or (self.brain_state_data == "Idle" and (self.brain_msg_time - actual_time) < 2.2 ): 
@@ -120,40 +122,19 @@ class ChatboxARI:
     
     
     def build_intent_query(self, user_input):
-        descriptions = "".join(self.intents_description)
-        """
-        msg = [
-            f"The robot needs to execute one of the following actions: {', '.join(self.intents.keys())}.\n",
-            f"Descriptions: {descriptions}.",
-            f"The user said: {user_input}.\n",
-            "What action did the user expect from the robot?\n",
-            "Return only the best matching option, formatted as following:\n",
-            "If greet: return greet\n",
-            "If goodbye: return goodbye\n",
-            "If remember user: return \"remember user:user_name_provided\"\n",
-            "If provide information: return provide information\n",
-            "If go to: return \"go to:specified_place_by_user\"\n",
-            "If follow user: return follow user\n",
-            "If find object: return \"find object:object_to_find_by_user\"\n",
-            "If explore: return \n",
-            "If translate: return \"translate to:specified_language_by_user\"\n",
-            "If other: return other\n",
-        ]
-        """
-        msg = ["The robot needs to execute one of the following actions:", ' '.join(list(self.intents.keys())), "The description of each action is the following: ", ' '.join(self.intents_description), ".The user said:", str(user_input),"What action did the user expect from the robot?",
-            ".RETURN ONLY the option that best matches from the list provided, DO NOT mention any of the other ones in the response.", 
-            "Additionally If the intent is \"go to\" return \"go to:specified_place\", if it is \"translate\" return \"translate to:specified_language\"", 
-            " if it is \"find object\" return \"find object:object_to_find\"",
-            " if it is \"remember user\" return \"remember user:user_name\""]
+        
+        msg = ["The robot needs to execute one of the following actions:", ' '.join(list(self.intents.keys())), 
+               "The description of each action is the following: ", ' '.join(self.intents_description), 
+               ".The user said:", str(user_input),"What action did the user expect from the robot?",
+               ".RETURN ONLY the option that best matches from the list provided, DO NOT mention any of the other ones in the response.", 
+               "Additionally If the intent is \"go to\" return \"go to:specified_place\", if it is \"translate\" return \"translate to:specified_language\"", 
+               " if it is \"find object\" return \"find object:object_to_find\"",
+               " if it is \"remember user\" return \"remember user:user_name\""]
         msg = ' '.join(msg)
         return msg
     
     def extract_intent(self, intent_ollama):
-
-        #for intent in list(self.intents.keys()):
-        #    if intent in intent_ollama.split():
-        #        return intent
-
+        # Check this, as sometimes it fails to return the first one.
         if "greet" in intent_ollama.split():
             return "greet"
         else:
@@ -187,7 +168,6 @@ class ChatboxARI:
     
     def publish_intent(self, intent, parameter):
         self.listen = False
-        
         #intent_data = {"intent":intent,"input": parameter}
         #self.dictonary_pub.publish(json.dumps(intent_data))
         #rospy.loginfo(f"Published speech intent: {response}")
@@ -202,8 +182,6 @@ class ChatboxARI:
         rospy.loginfo(f"Published intent:{intent}, Input:{parameter}")
 
         self.wait_for_brain(rospy.Time.now().to_sec())
-
-        self.listen = True
 
     def reject_message(self):
         return "I could not understand, please say it again."
@@ -223,18 +201,22 @@ class ChatboxARI:
         print(intent_result)
 
         if intent_result in {"No match found","other"}:
+            self.listen = False
             response = self.reject_message()
             self.tts_output(response)
+
         else:
             if intent_result in ["greet","goodbye"]:
                 self.publish_intent(intent_result,"")
 
             parameter, response = self.process_intent(intent_ollama, intent_result, user_input)
+            self.listen = False
             self.tts_output(response)
 
             if intent_result not in ["greet","goodbye"]:
                 self.publish_intent(intent_result, parameter)
 
+        self.listen = True
         return response
     
 if __name__ == '__main__':
