@@ -3,7 +3,7 @@ import rospy
 import os
 import cv2
 import face_recognition
-
+from tf import TransformListener
 from sensor_msgs.msg import Image
 from hri_msgs.msg import IdsList
 from pyhri import HRIListener
@@ -26,6 +26,8 @@ class FaceRecognitionNode:
 
         self.target_name = None
         self.current_id = None
+
+        self._tf_Listener = TransformListener()
         
         
         # Paths for saving data
@@ -245,43 +247,23 @@ class FaceRecognitionNode:
                 rospy.logwarn("Face ID not found for location update.")
                 return
 
-            # Update name
-            name = self.known_faces["names"][index]
+            faces = list(self.hri_listener.faces.values())
 
-            # Search body ID
-            body_id = None
-            #print("Temporal:",temporal_face_id)
-            for id, person in self.hri_listener.tracked_persons.items():
-                #rospy.loginfo("Detected personID %s with matching: faceID: %s, bodyID: %s, voiceID: %s",
+            for face in faces:
+                    
+                transform_face = face.transform()
 
-                        #  id, person.face_id, person.body_id, person.voice_id)
-                if person.face_id == temporal_face_id:
-                   # print("Match:",person.face_id)
-                    #print("Body:",person.body_id)
-                    body_id = person.body_id
-                    #rospy.loginfo(f"Found body_id: {body_id}")
-                    break
-            if body_id: # and name:
-                topic_name = f"/humans/bodies/{body_id}/position"
-                rospy.Subscriber(topic_name, Point, self.position_callback)
+                (t_face,r_face) = self._tf_Listener.lookupTransform("map",face.frame,rospy.Time(0))
+
+                self.known_faces["locations"][index] = {
+                    "x": round(t_face[0], 1),  
+                    "y": round(t_face[1], 1)
+                }
+                self.save_known_faces()
 
         else:
             rospy.logwarn("No recognized face to assign a location.")
 
-
-    def position_callback(self, msg):
-        """Callback to position of face being currently detected."""
-        try:
-            index = self.known_faces["ids"].index(self.current_id)
-        except ValueError:
-            rospy.logwarn("Current face ID not found for position update.")
-            return
-        self.known_faces["locations"][index] = {
-            "x": msg.x,
-            "y": msg.y,
-            "z": msg.z
-        }
-        self.save_known_faces()
 
     
     def search_for_name(self):
