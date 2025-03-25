@@ -20,8 +20,13 @@ class FaceRecognitionNode:
         self.bridge = CvBridge()
         self.hri_listener = HRIListener()
 
+        self.face_encoding_buffer = {}  # Store multiple encodings per face
+        self.encoding_threshold = 0.6   # Similarity threshold
+        self.required_encodings = 5     # Number of encodings needed for stability
+
         self.target_name = None
         self.current_id = None
+        
         
         # Paths for saving data
         self.database_path = os.path.dirname(__file__)
@@ -80,13 +85,14 @@ class FaceRecognitionNode:
                     data = json.load(f)
                     rospy.loginfo("Loaded face database successfully.")
                     
-                    data["encodings"] = [np.array(encoding, dtype=np.float64) for encoding in data["encodings"]]
+                    data["encodings"] = {key: [np.array(encoding, dtype=np.float64) for encoding in encodings] 
+                                     for key, encodings in data["encodings"].items()}
                     return data
                 except json.JSONDecodeError as e:
                     rospy.logerr(f"Error decoding JSON: {e}")
         else:
             rospy.logwarn(f"Face database file {self.encodings_file} does not exist.")
-        return {"encodings": [], "ids": [], "names": [], "locations": []}
+        return {"encodings": {}, "ids": [], "names": [], "locations": []}
 
 
     
@@ -94,7 +100,8 @@ class FaceRecognitionNode:
         """Save known face encodings and names to the database."""
         # Convert numpy arrays to lists for JSON serialization
         data = {
-            'encodings': [encoding.tolist() for encoding in self.known_faces["encodings"]],
+            'encodings': {key: [encoding.tolist() for encoding in encodings] 
+                      for key, encodings in self.known_faces["encodings"].items()},
             'ids': self.known_faces["ids"],
             'names': self.known_faces["names"],
             'locations': self.known_faces["locations"]
@@ -123,22 +130,51 @@ class FaceRecognitionNode:
         """Process the received aligned face image. Save it if it's a new one."""
         cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
         face_encodings = face_recognition.face_encodings(cv_image)
+        match_id = None
         
         if len(face_encodings) > 0:
             encoding = face_encodings[0]
-            match_id = self.find_matching_face(encoding)
+
+            # Store encoding in buffer
+            if face_id not in self.face_encoding_buffer:
+                self.face_encoding_buffer[face_id] = []
             
-            if match_id:
-                # rospy.loginfo(f"Recognized face {face_id} as {match_id}")
-                self.current_id = match_id
-            else:
-                name = None
-                new_id = self.save_new_face(face_id, encoding, cv_image, name)
-                rospy.loginfo(f"Saved new face {face_id} as {new_id} (Name: {name}).")
-                self.current_id = new_id
-            
-            # Save latest known location if you know the name
-            self.add_location_to_face(face_id)
+            self.face_encoding_buffer[face_id].append(encoding)
+
+            # Keep only the last 'required_encodings' values
+            if len(self.face_encoding_buffer[face_id]) > self.required_encodings:
+                self.face_encoding_buffer[face_id].pop(0)
+
+            # If we have enough encodings, check if they are stable
+            if len(self.face_encoding_buffer[face_id]) >= self.required_encodings:
+                if self.is_stable_encoding(face_id):
+                    match_id = self.find_matching_face(encoding)
+                
+                                
+                if match_id:
+                    rospy.loginfo(f"Recognized face {face_id} as {match_id}")
+                    self.current_id = match_id
+                else:
+                    name = None
+                    new_id = self.save_new_face(face_id, encoding, cv_image, name)
+                    rospy.loginfo(f"Saved new face {face_id} as {new_id} (Name: {name}).")
+                    self.current_id = new_id
+                
+                # Save latest known location if you know the name
+                self.add_location_to_face(face_id)
+                del self.face_encoding_buffer[face_id]  
+
+        
+    def is_stable_encoding(self, face_id):
+        """Check if stored encodings match using face_recognition.compare_faces."""
+        encodings = self.face_encoding_buffer[face_id]
+        first_encoding = encodings[0]  # Use the first stored encoding as reference
+
+        matches = face_recognition.compare_faces(encodings, first_encoding, tolerance=self.encoding_threshold)
+        match_ratio = sum(matches) / len(matches)  # Calculate percentage of matches
+
+        return match_ratio >= 0.8  # Require 80% of encodings to match
+
             
         
     def find_matching_face(self, encoding):
@@ -146,25 +182,40 @@ class FaceRecognitionNode:
         if len(self.known_faces["encodings"]) == 0:
             return None
         
-        matches = face_recognition.compare_faces(self.known_faces["encodings"], encoding, tolerance = 0.6)
-        if True in matches:
-            return self.known_faces["ids"][matches.index(True)]
-        return None
+        for person_id, person_encodings in self.known_faces["encodings"].items():
+            matches = face_recognition.compare_faces(person_encodings, encoding, tolerance=0.6)
+            match_ratio = sum(matches) / len(matches)  # Calculate percentage of matches
+            
+            if match_ratio >= 0.8:  # Require 80% of encodings to match
+                return person_id
     
     def save_new_face(self, face_id, encoding, image, name="unknown"):
         """Save new face encoding, image, and name."""
         new_id = f"person_{len(self.known_faces['ids']) + 1}"
-        self.known_faces["encodings"].append(encoding)
-        self.known_faces["ids"].append(new_id)
-        self.known_faces["names"].append(name)
-        self.known_faces["locations"].append({}) 
+
+        # Store multiple encodings for the new person
+        if new_id not in self.face_encoding_buffer:
+            self.face_encoding_buffer[new_id] = []
         
-        # Save encoding and names to the database
-        self.save_known_faces()
-        
-        # Save the image to disk
-        face_path = os.path.join(self.database_path, f"{new_id}.jpg")
-        cv2.imwrite(face_path, image)
+        self.face_encoding_buffer[new_id].append(encoding)
+
+        # Only store 5 encodings for each person
+        if len(self.face_encoding_buffer[new_id]) > self.required_encodings:
+            self.face_encoding_buffer[new_id].pop(0)
+
+        # After collecting enough encodings, save to known faces
+        if len(self.face_encoding_buffer[new_id]) >= self.required_encodings:
+            self.known_faces["encodings"][new_id] = self.face_encoding_buffer[new_id]
+            self.known_faces["ids"].append(new_id)
+            self.known_faces["names"].append(name)
+            self.known_faces["locations"].append({})
+
+            # Save encoding and names to the database
+            self.save_known_faces()
+
+            # Save the image to disk
+            face_path = os.path.join(self.database_path, f"{new_id}.jpg")
+            cv2.imwrite(face_path, image)
         
         return new_id
 
