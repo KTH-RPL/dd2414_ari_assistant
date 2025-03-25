@@ -52,7 +52,7 @@ class ARI:
 
     def run_action(self,intent,input):
         result = ""
-        rospy.loginfo("BEFORE State: "+ self.current_state + " | Current Action: " + self.current_intent + " | Result: " + self.last_result + " | Intent: " + intent)
+        #rospy.loginfo("BEFORE State: "+ self.current_state + " | Current Action: " + self.current_intent + " | Result: " + self.last_result + " | Intent: " + intent)
         if intent == "stop" or self.emergency_stop: #Give Priority to the Stop Action
             self.current_intent = "stop"
             self.current_state = "Busy"
@@ -66,6 +66,7 @@ class ARI:
                 self.look_at_person({"input":"stop"})
             elif not self.look_at_person_enable:
                 self.look_at_person({"input":"start"})
+
             self.action_dict[self.current_intent](input)
 
         elif self.current_state == "Busy" and self.last_result == "Working": #If robot is Working on the task at hand call the function to ask for an update
@@ -256,7 +257,7 @@ class Brain:
 
     def run(self):
         result = self.robot.run_action(self.intent,self.intent_dict)
-        #if result == "Success" or result == "Failure":
+#        if result == "Success" or result == "Failure":
         self.intent = ""
         
 
