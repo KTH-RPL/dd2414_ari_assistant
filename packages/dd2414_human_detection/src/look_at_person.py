@@ -11,7 +11,7 @@ class LookAtFace:
         self.hri = pyhri.HRIListener()
 
         # Publisher for gaze target
-        self.look_at_pub = rospy.Publisher("/look_at", PointStamped, queue_size=10)
+        self.look_at_pub = rospy.Publisher("/look_at", PointStamped, queue_size=1)
 
         self.active = True
         self.looking_ahead = False
@@ -73,6 +73,6 @@ if __name__ == '__main__':
 
     while not rospy.is_shutdown():
         server.node.trackFaces()
-        rospy.Rate(1).sleep()
+        rospy.Rate(10).sleep()
 
     

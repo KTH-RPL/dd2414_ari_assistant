@@ -9,7 +9,7 @@ import dd2414_brain_v2.msg as brain
 class LookAtFace:
     def __init__(self):
 
-        self.result = brain.BrainGoal()
+        self.result = brain.BrainResult()
         # HRI Listener for face detection
         self.hri = pyhri.HRIListener()
 
