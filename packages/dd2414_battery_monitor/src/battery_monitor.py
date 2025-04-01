@@ -12,8 +12,9 @@ class BatteryMonitor:
         rospy.Subscriber("/power_status", Power, self.power_status_callback)
         
     def power_status_callback(self, msg):
-        rospy.loginfo(f"Charge: {msg.charge}")
+        #rospy.loginfo(f"Battery level at: {msg.charge}")
         if msg.charge < 100 and not msg.is_connected:
+            rospy.loginfo(f"Battery level at: {msg.charge}")
             self.warning_pub.publish("Battery is low!")
     
     def run(self):
