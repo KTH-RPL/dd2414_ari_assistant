@@ -69,7 +69,7 @@ class LookAtFace:
                 except Exception as e:
                     rospy.logwarn(f"Could not transform face position: {e}")
                 
-        elif(self.tick > 20) and self.active:
+        elif(self.tick > 20 and self.active):
             rospy.loginfo(f"LookAtFace::No faces detected for 2s, looking forward")
             self.look_forward()
             self.tick = 0
