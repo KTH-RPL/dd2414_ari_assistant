@@ -46,7 +46,8 @@ class ChatboxARI:
             "translate: The robot has to help the user to translate sentences or a conversation", 
             "other: If any of the other actions does not fit, the robot has to classify it as other"]
         
-        self.api          = Client(host="http://192.168.0.106:11434")
+        #self.api          = Client(host="http://192.168.0.106:11434")
+        self.api          = Client(host="http://130.229.172.67:11434")
         self.system_promt = "You are an office assistant robot caled Ari. Be concise and helpful."
 
         # Publishers
