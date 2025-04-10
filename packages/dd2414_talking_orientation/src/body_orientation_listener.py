@@ -96,6 +96,8 @@ class BodyOrientationListener:
         self.br = tf_B()
         self._tf_buffer = Buffer()
         self._tf_Listener = TransformListener()
+        rospy.loginfo("[BODYORIENTATION]:Initialized")
+        self.string_header = "[BODYORIENTATION]:"
 
     def quaternion_euler(self,quaternion):
         euler = t.euler_from_quaternion([quaternion.x,quaternion.y,quaternion.z,quaternion.w])
@@ -104,7 +106,6 @@ class BodyOrientationListener:
     def nav_move_base(self,x,y,z,rx,ry,rz,rw):
         move_client = actionlib.SimpleActionClient('/move_base', MoveBaseAction)
         move_client.wait_for_server()
-        rospy.loginfo("Move base client ready")
 
         goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = "map"
@@ -117,12 +118,11 @@ class BodyOrientationListener:
         goal.target_pose.pose.orientation.z = rz
         goal.target_pose.pose.orientation.w = rw
 
-        rospy.loginfo("Sending goal")
         move_client.send_goal(goal)
         move_client.wait_for_result()
 
-        rospy.loginfo(f"Goal state:{move_client.get_state()}")
-        rospy.loginfo(move_client.get_goal_status_text())
+        rospy.logdebug(f"[BODYORIENTATION]:Goal state:{move_client.get_state()}")
+        rospy.logdebug("[BODYORIENTATION]:"+move_client.get_goal_status_text())
         
         return move_client.get_state()
     
@@ -163,8 +163,8 @@ class BodyOrientationListener:
                     (right_trans, right_rot) = self._tf_Listener.lookupTransform("map","right_"+body[0],rospy.Time(0))
                     transform_valid = True
                 except (LookupException, ConnectivityException, ExtrapolationException) as e:
-                    print(e)
-                    print("Transform not published yet")
+                    rospy.logdebug(e)
+                    rospy.logdebug("[BODYORIENTATION]:Transform not published yet")
                     transform_valid = False
                     continue
 
@@ -182,7 +182,7 @@ class BodyOrientationListener:
                 b2r_xy_norm = np.linalg.norm([b2r_translation_x, b2r_translation_y], ord = 2)
 
                 if np.arccos(b2r_translation_x/b2r_xy_norm) < (self.threshold/180*np.pi) and b2r_translation_x > 0:
-                    print("Starting movement")
+                    rospy.logdebug("[BODYORIENTATION]:Starting movement")
                     bodies_facing_robot.append(body[0])
 
                     try:
@@ -191,12 +191,12 @@ class BodyOrientationListener:
                             result = self.nav_move_base(left_trans[0],left_trans[1],0,left_rot[0],left_rot[1],left_rot[2],left_rot[3])
 
                             if result == actionlib.GoalStatus.SUCCEEDED:
-                                rospy.loginfo("Arrived at target!")
+                                rospy.logdebug("[BODYORIENTATION]:Arrived at target!")
                                 result_brain.result = "Success"
                                 return result_brain
                                 
                             else:
-                                rospy.loginfo("Trying right position!")
+                                rospy.logdebug("[BODYORIENTATION]:Trying right position!")
                                 result = self.nav_move_base(right_trans[0],right_trans[1],0,right_rot[0],right_rot[1],right_rot[2],right_rot[3])
                                 if result == actionlib.GoalStatus.SUCCEEDED:
                                     result_brain.result = "Success"
@@ -205,7 +205,7 @@ class BodyOrientationListener:
                                     result_brain.result = "Failure"
                                     return result_brain
                         else:
-                            rospy.loginfo("Transform not available!")
+                            rospy.logdebug("[BODYORIENTATION]:Transform not available!")
                             result_brain.result = "Working"
                             return result_brain
                         
@@ -219,5 +219,5 @@ class BodyOrientationListener:
 
 
 if __name__=="__main__":
-    rospy.init_node("body_orientation_listener")
+    rospy.init_node("body_orientation_listener",log_level=rospy.INFO)
     server = StatusUpdate(rospy.get_name(),BodyOrientationListener)
