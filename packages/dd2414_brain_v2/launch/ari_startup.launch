@@ -11,6 +11,6 @@
   <node name="follow_user" pkg="dd2414_follow_user" type="follow_user.py"/>
   <node name="body_orientation_listener" pkg="dd2414_talking_orientation" type="body_orientation_listener.py"/>
   <node name="detect_people_looking_at_ari" pkg="dd2414_human_detection" type="detect_people_looking_at_ari.py"/>
-  <node name="LLM" pkg="chatbox_ari" type="chatbox_ari.py"/>
+  <!-- <node name="LLM" pkg="chatbox_ari" type="chatbox_ari.py"/> --> 
 
 </launch>

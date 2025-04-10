@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(chatbox_ari)
+project(dd2414_ollama_ip)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -8,10 +8,8 @@ project(chatbox_ari)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  hri_msgs
-  pal_interaction_msgs
-  audio_common_msgs
   rospy
+  std_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -71,7 +69,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate added messages and services with any dependencies listed here
 # generate_messages(
 #   DEPENDENCIES
-#   hri_msgs#   pal_interaction_msgs
+#   std_msgs
 # )
 
 ################################################
@@ -105,8 +103,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES chatbox_ari
-  CATKIN_DEPENDS hri_msgs numpy actionlib ollama pal_interaction_msgs requests rospy audio_common_msgs
+#  LIBRARIES dd2414_ollama_ip
+  CATKIN_DEPENDS rospy std_msgs
 #  DEPENDS system_lib
 )
 
@@ -123,7 +121,7 @@ include_directories(
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/chatbox_ari.cpp
+#   src/${PROJECT_NAME}/dd2414_ollama_ip.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -134,7 +132,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/chatbox_ari_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/dd2414_ollama_ip_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -161,9 +159,9 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
-   src/chatbox_ari.py
+   src/ollama_ip.py
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+ )
 
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
@@ -198,7 +196,7 @@ catkin_install_python(PROGRAMS
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_chatbox_ari.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_dd2414_ollama_ip.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

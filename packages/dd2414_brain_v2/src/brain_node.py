@@ -47,6 +47,8 @@ class ARI:
                             "goodbye"              :self.greet
                             }
         rospy.loginfo(self.string_header + "Initialized")
+
+        self.look_at_person({"input":"stop"})
         
     def response_cb(self,response_msg):
         self.response_msg = response_msg.data
@@ -63,10 +65,10 @@ class ARI:
             self.current_intent = intent #Save the Current action
             self.current_state = "Busy"
 
-            if intent in ("follow user","go to","provide information","translate","find speaker") and self.look_at_person_enable:
-                self.look_at_person({"input":"stop"})
-            elif not self.look_at_person_enable:
-                self.look_at_person({"input":"start"})
+            #if intent in ("follow user","go to","provide information","translate","find speaker") and self.look_at_person_enable:
+            #    self.look_at_person({"input":"stop"})
+            #elif not self.look_at_person_enable:
+            #    self.look_at_person({"input":"start"})
 
             self.action_dict[self.current_intent](input)
 
