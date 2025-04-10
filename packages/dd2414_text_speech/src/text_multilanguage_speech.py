@@ -3,13 +3,13 @@ import rospy
 from dd2414_status_update import StatusUpdate
 import simpleaudio as sa
 from actionlib import SimpleActionServer
-from dd2414_text_speech.action import TextToSpeechMultilanguageAction
+import dd2414_text_speech.msg as tts
 
 
 
 class TextMultilanguageSpeech:
     def __init__(self):
-        self._as = SimpleActionServer('tts_multilanguage', TextToSpeechMultilanguageAction, execute_cb=self.action_cb)
+        self._as = SimpleActionServer('tts_multilanguage', tts.TextToSpeechMultilanguageAction, execute_cb=self.action_cb)
 
         self._as.start()  # Initialize ros service
         rospy.loginfo("Text-to-Speech Multilanguage Action Server is running.")

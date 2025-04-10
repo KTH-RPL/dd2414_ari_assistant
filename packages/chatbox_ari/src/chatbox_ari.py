@@ -14,7 +14,7 @@ from std_msgs.msg import String
 from hri_msgs.msg import LiveSpeech
 from audio_common_msgs.msg import AudioData
 from pal_interaction_msgs.msg import TtsAction, TtsGoal
-from dd2414_text_speech.action import TextToSpeechMultilanguageAction
+from dd2414_text_speech.msg import TextToSpeechMultilanguageAction
 
 
 
@@ -297,6 +297,7 @@ class ChatboxARI:
                 self.publish_intent(intent_result,"")
 
             parameter, response = self.process_intent(intent_ollama, intent_result, user_input)
+            rospy.loginfo(f"[LLM            ]:Ollama response: {response}")
             self.listen = False
             if self.stt_language == "en":
                 self.tts_output(response)

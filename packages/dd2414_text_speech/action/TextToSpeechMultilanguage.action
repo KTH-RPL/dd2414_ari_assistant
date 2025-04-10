@@ -1,8 +1,9 @@
-# TextToSpeechMultilanguage.action
+#goal definition
 ---
-# Result
-bool success
-
+#result definition
+string result
+string in_dic
 ---
-# Feedback
-string status
+#feedback
+string feedback
+string in_dic
