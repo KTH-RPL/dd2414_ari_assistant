@@ -267,7 +267,8 @@ class ChatboxARI:
             if intent_result not in ["greet","goodbye"]:
                 self.publish_intent(intent_result, parameter)
 
-        self.listen = True
+        self.listen      = True
+        self.stt_listen  = True
         return response
     
 if __name__ == '__main__':
