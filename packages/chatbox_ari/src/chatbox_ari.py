@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
-import rospy
+import re
+import os
 import json
 import wave
+import rospy
 import whisper
-import re
+import paramiko
 
+from gtts import gTTS
 from ollama import Client
 from actionlib import SimpleActionClient
 from std_msgs.msg import String
 from hri_msgs.msg import LiveSpeech
 from audio_common_msgs.msg import AudioData
 from pal_interaction_msgs.msg import TtsAction, TtsGoal
+from dd2414_text_speech.action import TextToSpeechMultilanguageAction
+
+
 
 
 class ChatboxARI:
@@ -35,7 +41,7 @@ class ChatboxARI:
         self.SAMPLE_WIDTH = 2      # 2 bytes = 16-bit audio
         self.CHANNELS     = 1      # Mono
         self.stt_result   = ""
-        self.stt_language = ""
+        self.stt_language = "en"
 
         self.intents = {         #Action/Split
             "greet"              :[False,False],
@@ -73,6 +79,11 @@ class ChatboxARI:
         rospy.Subscriber("/audio/speech", AudioData, self.stt)
         rospy.Subscriber("/brain/state",String,self.update_brain_state)
         rospy.Subscriber("/brain/user_name",String, self.update_brain_person)
+
+        # Action client of TTS Multilanguages
+        self.ac_ttsm = SimpleActionClient('tts_multilanguage', TextToSpeechMultilanguageAction)
+        self.ac_ttsm.wait_for_server()
+
 
         self.setup_tts()
         self.calibrate_api()
@@ -243,6 +254,28 @@ class ChatboxARI:
         goal.rawtext.text    = text
         self.tts_client.send_goal(goal)
 
+    
+    def tts_multilanguage_output(self,text):
+        tts = gTTS(text, self.stt_language)
+        save_path = os.path.expanduser('/tmp/tts_audio.mp3')
+
+        # Save the audio file
+        tts.save(save_path)
+
+        # Send audio to robot
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect("192.168.128.28", username="pal", password="pal")
+
+        sftp = ssh.open_sftp()
+        sftp.put("/tmp/tts_audio.mp3", "/tmp/tts_audio.mp3")
+        sftp.close()
+        ssh.close()
+
+        # Send goal to TTS Multilanguage server to reproduce audio
+        goal = TextToSpeechMultilanguageGoal()
+        self.ac_ttsm.send_goal(goal)
+
     def process_user_input(self, user_input):
         query         = self.build_intent_query(user_input)
         intent_ollama = self.ask_ollama(query)
@@ -254,7 +287,10 @@ class ChatboxARI:
         if intent_result in {"No match found","other"}:
             self.listen = False
             response = self.reject_message()
-            self.tts_output(response)
+            if self.stt_language == "en":
+                self.tts_output(response)
+            else:
+                self.tts_multilanguage_output(response)
 
         else:
             if intent_result in ["greet","goodbye"]:
@@ -262,7 +298,10 @@ class ChatboxARI:
 
             parameter, response = self.process_intent(intent_ollama, intent_result, user_input)
             self.listen = False
-            self.tts_output(response)
+            if self.stt_language == "en":
+                self.tts_output(response)
+            else:
+                self.tts_multilanguage_output(response)
 
             if intent_result not in ["greet","goodbye"]:
                 self.publish_intent(intent_result, parameter)
