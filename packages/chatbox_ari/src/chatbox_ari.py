@@ -1,27 +1,40 @@
 #!/usr/bin/env python3
 import rospy
 import json
+import wave
+import whisper
 import re
 
 from ollama import Client
 from actionlib import SimpleActionClient
 from std_msgs.msg import String
 from hri_msgs.msg import LiveSpeech
+from audio_common_msgs.msg import AudioData
 from pal_interaction_msgs.msg import TtsAction, TtsGoal
+
 
 class ChatboxARI:
     def __init__(self):
         rospy.init_node("chatbox_ari",log_level=rospy.INFO)
-        self.rate   = rospy.Rate(1)
-        self.listen = True
-        self.string_header = "[LLM            ]:"
+        self.rate              = rospy.Rate(1)
+        self.listen            = True
+        self.string_header     = "[LLM            ]:"
         self.stop              = False
         self.brain_state_data  = "Busy"
         self.brain_person_name = "unknown"
         self.brain_msg_time    = rospy.Time.now().to_sec()
         self.language          = "en_US"
         self.model_ollama      = "mistral:latest"
-        self.verbose = rospy.get_param("/verbose",False)
+        self.stt_model         = whisper.load_model("tiny")
+        self.verbose           = rospy.get_param("/verbose",False)
+
+        # Audio parameters – adjust according to your setup
+        self.stt_filename = f"/tmp/ARI_stt.wav"
+        self.SAMPLE_RATE  = 16000  # Hz
+        self.SAMPLE_WIDTH = 2      # 2 bytes = 16-bit audio
+        self.CHANNELS     = 1      # Mono
+        self.stt_result   = ""
+        self.stt_language = ""
 
         self.intents = {         #Action/Split
             "greet"              :[False,False],
@@ -55,7 +68,8 @@ class ChatboxARI:
         self.dictonary_pub = rospy.Publisher("/brain/intent",String,queue_size=10)
 
         # Subscribers
-        rospy.Subscriber("/humans/voices/anonymous_speaker/speech",LiveSpeech,self.asr_result)
+        #rospy.Subscriber("/humans/voices/anonymous_speaker/speech",LiveSpeech,self.asr_result)
+        rospy.Subscriber("/audio/speech", AudioData, self.stt)
         rospy.Subscriber("/brain/state",String,self.update_brain_state)
         rospy.Subscriber("/brain/user_name",String, self.update_brain_person)
 
@@ -68,6 +82,37 @@ class ChatboxARI:
     def setup_tts(self):
         self.tts_client = SimpleActionClient("/tts",TtsAction)
         self.tts_client.wait_for_server()
+
+    def stt(self,msg):
+        if not msg.data:
+            return
+        # Open WAV file for writing
+        with wave.open(self.stt_filename, 'wb') as wf:
+            wf.setnchannels(self.CHANNELS)
+            wf.setsampwidth(self.SAMPLE_WIDTH)
+            wf.setframerate(self.SAMPLE_RATE)
+            wf.writeframes(msg.data)  # msg.data is a bytes object
+        #rospy.loginfo(f"Saved audio to {self.stt_filename}")
+
+        result            = self.stt_model.transcribe(self.stt_filename)
+        self.stt_result   = result["text"]
+        self.stt_language = result["language"]
+
+        rospy.loginfo(f"[LLM            ]:User said: {self.stt_result}")
+        if (self.stt_result).lower() == "stop":
+            self.tts_output("Stopping")
+            self.listen = False
+            self.publish_intent("stop","")
+            return
+        if (self.stt_result).lower()  == "start" or (self.stt_result).lower()  == "init":
+            self.tts_output("Listening")
+            self.listen = True
+            return
+        if not self.listen:
+            return
+        
+        self.process_user_input(self.stt_result)
+
 
     def calibrate_api(self):
         rospy.loginfo("[LLM            ]:Initializing calibraton...")
@@ -86,23 +131,23 @@ class ChatboxARI:
     def update_brain_person(self,msg):
         self.brain_person_name = msg.data
 
-    def asr_result(self,msg):
-        if not msg.final:
-            return
-        rospy.loginfo(f"[LLM            ]:User said: {msg.final}")
-        if (msg.final).lower() == "stop":
-            self.tts_output("Stopping")
-            self.listen = False
-            self.publish_intent("stop","")
-            return
-        if (msg.final).lower()  == "start" or (msg.final).lower()  == "init":
-            self.tts_output("Listening")
-            self.listen = True
-            return
-        if not self.listen:
-            return
-        
-        self.process_user_input(msg.final)
+    #def asr_result(self,msg):
+    #    if not msg.final:
+    #        return
+    #    rospy.loginfo(f"[LLM            ]:User said: {msg.final}")
+    #    if (msg.final).lower() == "stop":
+    #        self.tts_output("Stopping")
+    #        self.listen = False
+    #        self.publish_intent("stop","")
+    #        return
+    #    if (msg.final).lower()  == "start" or (msg.final).lower()  == "init":
+    #        self.tts_output("Listening")
+    #        self.listen = True
+    #        return
+    #    if not self.listen:
+    #        return
+    #    
+    #    self.process_user_input(msg.final)
 
     def wait_for_brain(self,actual_time):
         while (self.brain_state_data != "Idle" ) or (self.brain_state_data == "Idle" and (self.brain_msg_time - actual_time) < 2.2 ): 

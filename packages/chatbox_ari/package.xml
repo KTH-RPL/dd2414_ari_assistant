@@ -56,6 +56,8 @@
   <build_depend>pal_interaction_msgs</build_depend>
   <build_depend>requests</build_depend>
   <build_depend>rospy</build_depend>
+  <build_depend>audio_common_msgs</build_depend>
+
   <build_export_depend>hri_msgs</build_export_depend>
   <build_export_depend>actionlib</build_export_depend>
   <build_export_depend>numpy</build_export_depend>
@@ -63,6 +65,8 @@
   <build_export_depend>pal_interaction_msgs</build_export_depend>
   <build_export_depend>requests</build_export_depend>
   <build_export_depend>rospy</build_export_depend>
+  <build_export_depend>audio_common_msgs</build_export_depend>
+
   <exec_depend>hri_msgs</exec_depend>
   <exec_depend>actionlib</exec_depend>
   <exec_depend>numpy</exec_depend>
@@ -70,6 +74,7 @@
   <exec_depend>pal_interaction_msgs</exec_depend>
   <exec_depend>requests</exec_depend>
   <exec_depend>rospy</exec_depend>
+  <exec_depend>audio_common_msgs</exec_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

@@ -10,6 +10,7 @@ project(chatbox_ari)
 find_package(catkin REQUIRED COMPONENTS
   hri_msgs
   pal_interaction_msgs
+  audio_common_msgs
   rospy
 )
 
@@ -105,7 +106,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES chatbox_ari
-  CATKIN_DEPENDS hri_msgs numpy actionlib ollama pal_interaction_msgs requests rospy
+  CATKIN_DEPENDS hri_msgs numpy actionlib ollama pal_interaction_msgs requests rospy audio_common_msgs
 #  DEPENDS system_lib
 )
 
