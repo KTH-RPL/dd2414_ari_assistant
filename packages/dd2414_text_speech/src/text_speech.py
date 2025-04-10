@@ -15,6 +15,8 @@ class TextSpeech:
         self.language = "en_US"
         self.tts_client = SimpleActionClient("/tts", TtsAction)
         self.tts_client.wait_for_server()
+        rospy.loginfo("[TTS            ]:Initialized")
+        self.string_header = "[TTS            ]:"
 
     def action(self,goal):
         return self.tts_output(goal.goal)
@@ -37,6 +39,6 @@ class TextSpeech:
         return result
 
 if __name__=="__main__":
-    rospy.init_node('text_speech')
+    rospy.init_node('text_speech',log_level=rospy.INFO)
     server = StatusUpdate(rospy.get_name(),TextSpeech)
     rospy.spin()

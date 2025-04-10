@@ -78,6 +78,6 @@ class BodyOrientationListener:
 if __name__=="__main__":
 
 
-    rospy.init_node("body_orientation_listener")
+    rospy.init_node("body_orientation_listener",log_level=rospy.INFO)
     bol = BodyOrientationListener(threshold=20)
     bol.run()

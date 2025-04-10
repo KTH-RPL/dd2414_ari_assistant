@@ -20,6 +20,9 @@ class LookAtFace:
         self.looking_ahead = False
         self.tick = 0
 
+        rospy.loginfo("[LOOK_AT_PERSON ]:Initialized")
+        self.string_header = "[LOOK_AT_PERSON ]:"
+
     def action(self,goal):
         if(goal == "start"):
             self.active = True
@@ -51,7 +54,8 @@ class LookAtFace:
 
             self.looking_ahead = False
 
-            rospy.loginfo(f"LookAtFace::Found faces {list(faces)}")
+            rospy.logdebug(f"[LOOK_AT_PERSON ]:Found faces {list(faces)}")
+            #rospy.loginfo(f"[LOOK_AT_PERSON ]:Found faces {list(faces)}")
 
             # Select last face
             face = list(faces.values())[-1]
@@ -67,15 +71,17 @@ class LookAtFace:
                     self.look_at_pub.publish(target)
 
                 except Exception as e:
-                    rospy.logwarn(f"Could not transform face position: {e}")
+                    rospy.logwarn(f"[LOOK_AT_PERSON ]:Could not transform face position: {e}")
                 
         elif(self.tick > 20 and self.active):
-            rospy.loginfo(f"LookAtFace::No faces detected for 2s, looking forward")
+            rospy.logdebug("[LOOK_AT_PERSON ]:No faces detected for 2s, looking forward")
+            #rospy.loginfo("[LOOK_AT_PERSON ]:No faces detected for 2s, looking forward")
             self.look_forward()
             self.tick = 0
 
         elif(not self.looking_ahead):
-            rospy.loginfo(f"LookAtFace::No faces detected")
+            rospy.logdebug("[LOOK_AT_PERSON ]:No faces detected")
+            #rospy.loginfo("[LOOK_AT_PERSON ]:No faces detected")
             target = PointStamped(point=Point(x=10, y=0, z=0))
             target.header.frame_id = '/sellion_link'
 
@@ -93,7 +99,7 @@ class LookAtFace:
 
 
 if __name__ == '__main__':
-    rospy.init_node("face_gaze_tracker")
+    rospy.init_node("face_gaze_tracker",log_level=rospy.INFO)
     server = StatusUpdate(rospy.get_name(),LookAtFace)
 
     while not rospy.is_shutdown():

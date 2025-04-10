@@ -11,16 +11,17 @@ from pal_interaction_msgs.msg import TtsAction, TtsGoal
 
 class ChatboxARI:
     def __init__(self):
-        rospy.init_node("chatbox_ari")
+        rospy.init_node("chatbox_ari",log_level=rospy.INFO)
         self.rate   = rospy.Rate(1)
         self.listen = True
-
+        self.string_header = "[LLM            ]:"
         self.stop              = False
         self.brain_state_data  = "Busy"
         self.brain_person_name = "unknown"
         self.brain_msg_time    = rospy.Time.now().to_sec()
         self.language          = "en_US"
         self.model_ollama      = "mistral:latest"
+        self.verbose = rospy.get_param("/verbose",False)
 
         self.intents = {         #Action/Split
             "greet"              :[False,False],
@@ -47,7 +48,7 @@ class ChatboxARI:
             "other: If any of the other actions does not fit, the robot has to classify it as other"]
         
         #self.api          = Client(host="http://192.168.0.106:11434")
-        self.api          = Client(host="http://130.229.172.67:11434")
+        self.api          = Client(host="http://130.229.182.92:11434")
         self.system_promt = "You are an office assistant robot caled Ari. Be concise and helpful."
 
         # Publishers
@@ -61,7 +62,7 @@ class ChatboxARI:
         self.setup_tts()
         self.calibrate_api()
 
-        rospy.loginfo("Chatbox ARI node ready")
+        rospy.loginfo("[LLM            ]:Initialized")
         self.tts_output("Ready to operate")        
 
     def setup_tts(self):
@@ -69,14 +70,14 @@ class ChatboxARI:
         self.tts_client.wait_for_server()
 
     def calibrate_api(self):
-        rospy.loginfo("Initializing calibraton...")
+        rospy.loginfo("[LLM            ]:Initializing calibraton...")
         test_sentences = ["Hello","Find the red ball", "Hello, I am Joshua"]
 
         for msg in test_sentences:
             query = self.build_intent_query(msg)
             self.ask_ollama(query)
 
-        rospy.loginfo("Calibraton done")
+        rospy.loginfo("[LLM            ]:Calibraton done")
 
     def update_brain_state(self,msg):
         self.brain_state_data = msg.data
@@ -88,7 +89,7 @@ class ChatboxARI:
     def asr_result(self,msg):
         if not msg.final:
             return
-        rospy.loginfo(f"User said: {msg.final}")
+        rospy.loginfo(f"[LLM            ]:User said: {msg.final}")
         if (msg.final).lower() == "stop":
             self.tts_output("Stopping")
             self.listen = False
@@ -106,9 +107,9 @@ class ChatboxARI:
     def wait_for_brain(self,actual_time):
         while (self.brain_state_data != "Idle" ) or (self.brain_state_data == "Idle" and (self.brain_msg_time - actual_time) < 2.2 ): 
             rospy.sleep(1.0)
-            rospy.loginfo(f"Waiting for brain: {self.brain_state_data}")
+            rospy.logdebug(f"[LLM            ]:Waiting for brain: {self.brain_state_data}")
 
-        rospy.loginfo(f"State:{self.brain_state_data}, Diff: {self.brain_msg_time - actual_time}")
+        rospy.logdebug(f"[LLM            ]:State:{self.brain_state_data}, Diff: {self.brain_msg_time - actual_time}")
 
     def ask_ollama(self, msg, promt=""):
         completion = self.api.chat(
@@ -180,7 +181,7 @@ class ChatboxARI:
 
         intent_data = {"intent":intent,"input": parameter}
         self.dictonary_pub.publish(json.dumps(intent_data))
-        rospy.loginfo(f"Published intent:{intent}, Input:{parameter}")
+        rospy.logdebug(f"[LLM            ]:Published intent:{intent}, Input:{parameter}")
 
         self.wait_for_brain(rospy.Time.now().to_sec())
 
@@ -197,9 +198,9 @@ class ChatboxARI:
         query         = self.build_intent_query(user_input)
         intent_ollama = self.ask_ollama(query)
         #rospy.loginfo("Intent ollama:",intent_ollama)
-        print(intent_ollama)
+        rospy.logdebug(self.string_header + intent_ollama)
         intent_result = self.extract_intent(intent_ollama)
-        print(intent_result)
+        rospy.loginfo(self.string_header + intent_result)
 
         if intent_result in {"No match found","other"}:
             self.listen = False
