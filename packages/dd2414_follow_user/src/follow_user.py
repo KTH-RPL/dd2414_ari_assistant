@@ -29,6 +29,7 @@ class ARIHeadFollower:
         self.br    = tf_B()
         self._tf_buffer = Buffer()
         self._tf_Listener = TransformListener()
+        self.string_header = "[FOLLOW_USER    ]:"
 
         # Publisher for head movement
         self.look_at_pub  = rospy.Publisher("/look_at",PointStamped,queue_size=1)
@@ -44,14 +45,15 @@ class ARIHeadFollower:
         self.head_2_min, self.head_2_max = -0.2, 0.4
 
         self.track_user
+        rospy.loginfo("[FOLLOW_USER    ]:Initialized")
 
     def asr_result(self,msg):
         sentence = msg.final
-        rospy.loginfo(f"Understood sentence: {sentence}")
+        rospy.logdebug(f"[FOLLOW_USER    ]:Understood sentence: {sentence}")
         
         if sentence.lower() == "stop":
             self.stop = True
-            rospy.loginfo("Stoping Following behavior")
+            rospy.logdebug("[FOLLOW_USER    ]:Stoping Following behavior")
             result = brain.BrainResult()
             result.result = "Success"
             return result
@@ -68,7 +70,6 @@ class ARIHeadFollower:
     def nav_move_base(self,x,y,z,rx,ry,rz,rw):
         move_client = actionlib.SimpleActionClient('/move_base', MoveBaseAction)
         move_client.wait_for_server()
-        rospy.loginfo("Move base client ready")
 
         goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = "base_link"
@@ -81,12 +82,12 @@ class ARIHeadFollower:
         goal.target_pose.pose.orientation.z = rz
         goal.target_pose.pose.orientation.w = rw
 
-        rospy.loginfo("Sending goal")
+        rospy.logdebug("[FOLLOW_USER    ]:Sending goal")
         move_client.send_goal(goal)
         move_client.wait_for_result()
 
-        rospy.loginfo(f"Goal state:{move_client.get_state()}")
-        rospy.loginfo(move_client.get_goal_status_text())
+        rospy.logdebug(f"[FOLLOW_USER    ]:Goal state:{move_client.get_state()}")
+        rospy.logdebug("[FOLLOW_USER    ]:"+move_client.get_goal_status_text())
         
         return move_client.get_state()
     
@@ -218,7 +219,7 @@ class ARIHeadFollower:
                 if self.stop:
                     self.stop = False
                     self.running = False
-                    rospy.loginfo("Returning stop")
+                    rospy.logdebug("[FOLLOW_USER    ]:Returning stop")
                     result.result = "Success"
                     return result
 
@@ -233,7 +234,7 @@ class ARIHeadFollower:
 
 
 if __name__ == "__main__":
-    rospy.init_node("follow_user")
+    rospy.init_node("follow_user",log_level=rospy.INFO)
     server = StatusUpdate(rospy.get_name(),ARIHeadFollower)
 
 

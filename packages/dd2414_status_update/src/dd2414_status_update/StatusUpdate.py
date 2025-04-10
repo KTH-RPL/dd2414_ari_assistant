@@ -15,15 +15,18 @@ class StatusUpdate:
         self._result = brain.BrainResult()
         # INSTANTIATE NODE HERE
         self.node = NodeClass()
-
+        if hasattr(self.node,"string_header"):
+            self.string_header = self.node.string_header
+        else:
+            self.string_header = ""
         #####################################
-        rospy.loginfo("Action Server " + self._action_name + " initialized.")
+        rospy.loginfo(self.string_header + "Action Server " + self._action_name + " initialized.")
     
     def execute_cb(self,goal):
         #Insert Code for new GOAL SETUP HERE
 
         ###################################
-        rospy.loginfo("Starting Execution of " + self._action_name)
+        rospy.loginfo(self.string_header + "Starting Execution of " + self._action_name)
         self._result.result = "Working" #Variable to store the status
 
         if self._as.is_preempt_requested():
@@ -31,7 +34,7 @@ class StatusUpdate:
             self.node.preempted()
             ##################################################
             self._as.set_preempted()
-            rospy.loginfo("Goal Preempted.")
+            rospy.loginfo(self.string_header + "Goal Preempted.")
         else:
             while self._result.result == "Working":
                 if self._as.is_preempt_requested():
@@ -39,7 +42,7 @@ class StatusUpdate:
                     self.node.preempted()
                     ##################################################
                     self._as.set_preempted()
-                    rospy.loginfo("Goal Preempted.")
+                    rospy.loginfo(self.string_header + "Goal Preempted.")
 
                 self._feedback.feedback = self._result.result
                 self._feedback.in_dic = self._result.in_dic
@@ -47,9 +50,9 @@ class StatusUpdate:
                 self._result = self.node.action(goal)
             if self._result.result == "Success":
                 
-                rospy.loginfo("Action Server " + self._action_name + " Succeded.")
+                rospy.loginfo(self.string_header + "Action Server " + self._action_name + " Succeded.")
                 self._as.set_succeeded(self._result)
             else:
                 self._result.result = "Failure"
-                rospy.loginfo("Action Server " + self._action_name + " Aborted.")
+                rospy.loginfo(self.string_header + "Action Server " + self._action_name + " Aborted.")
                 self._as.set_aborted(self._result)

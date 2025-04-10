@@ -41,6 +41,8 @@ class FaceRecognitionNode:
         # ROS subscribers
         self.face_ids_sub = rospy.Subscriber("/humans/faces/tracked", IdsList, self.face_id_callback)
         self.face_images_subs = {}
+        rospy.loginfo("[FACERECOGNITION]:Initialized")
+        self.string_header = "[FACERECOGNITION]:"
 
     def action(self,goal):
         """
@@ -54,7 +56,7 @@ class FaceRecognitionNode:
 
             # Save name if its not unknown
             if self.target_name != "unknown":
-                rospy.loginfo(f"Save name: {self.target_name}")
+                rospy.loginfo(f"[FACERECOGNITION]:Save name: {self.target_name}")
                 self.add_name_to_face(self.target_name)
 
                 # Return name that was saved
@@ -62,7 +64,7 @@ class FaceRecognitionNode:
 
             
             else:
-                rospy.loginfo(f"Name unknown. Searching if we already know it.")
+                rospy.logdebug(f"[FACERECOGNITION]:Name unknown. Searching if we already know it.")
                 name = self.search_for_name()
 
                 # Return name if we know it
@@ -72,7 +74,7 @@ class FaceRecognitionNode:
                     result.in_dic = json.dumps({"name" : "unknown" })
 
             result.result = "Success"
-            rospy.loginfo(result)
+            rospy.logdebug(result)
             return result
 
 
@@ -85,7 +87,7 @@ class FaceRecognitionNode:
             with open(self.encodings_file, "r") as f:
                 try:
                     data = json.load(f)
-                    rospy.loginfo("Loaded face database successfully.")
+                    rospy.logdebug("[FACERECOGNITION]:Loaded face database successfully.")
                     
                     data["encodings"] = {key: [np.array(encoding, dtype=np.float64) for encoding in encodings] 
                                      for key, encodings in data["encodings"].items()}
@@ -112,7 +114,7 @@ class FaceRecognitionNode:
         try:
             with open(self.encodings_file, "w") as f:
                 json.dump(data, f, indent=4)
-            rospy.loginfo("Face data saved successfully.")
+            rospy.logdebug("[FACERECOGNITION]:Face data saved successfully.")
         except Exception as e:
             rospy.logerr(f"Error saving face data: {e}")
 
@@ -154,12 +156,12 @@ class FaceRecognitionNode:
                 
                                 
                 if match_id:
-                    rospy.loginfo(f"Recognized face {face_id} as {match_id}")
+                    rospy.logdebug(f"[FACERECOGNITION]:Recognized face {face_id} as {match_id}")
                     self.current_id = match_id
                 else:
                     name = None
                     new_id = self.save_new_face(face_id, encoding, cv_image, name)
-                    rospy.loginfo(f"Saved new face {face_id} as {new_id} (Name: {name}).")
+                    rospy.loginfo(f"[FACERECOGNITION]:Saved new face {face_id} as {new_id} (Name: {name}).")
                     self.current_id = new_id
                 
                 # Save latest known location if you know the name
@@ -230,7 +232,7 @@ class FaceRecognitionNode:
                 index = self.known_faces["ids"].index(face_id)
                 self.known_faces["names"][index] = name
                 self.save_known_faces()
-                rospy.loginfo(f"Assigned name {name} to face ID {face_id}")
+                rospy.logdebug(f"Assigned name {name} to face ID {face_id}")
             except ValueError:
                 rospy.logwarn("Face ID not found in known faces.")
         else:
@@ -294,6 +296,6 @@ class FaceRecognitionNode:
 
 
 if __name__ == '__main__':
-    rospy.init_node('face_recognition_node', anonymous=False)    
+    rospy.init_node('face_recognition_node', anonymous=False,log_level=rospy.INFO)    
     server = StatusUpdate(rospy.get_name(), FaceRecognitionNode)
     rospy.spin()

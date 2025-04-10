@@ -6,13 +6,15 @@ from mm11_msgs.msg import Power
 
 class BatteryMonitor:
     def __init__(self):
-        rospy.init_node("battery_monitor")
+        rospy.init_node("battery_monitor",log_level=rospy.INFO)
         
         self.warning_pub = rospy.Publisher("/battery_warning", String, queue_size=10)
         rospy.Subscriber("/power_status", Power, self.power_status_callback)
+        self.string_header = "[BATTERY        ]:"
+        rospy.loginfo("[BATTERY        ]:Initialized")
         
     def power_status_callback(self, msg):
-        rospy.loginfo(f"Battery level at: {msg.charge}")
+        rospy.loginfo(f"[BATTERY        ]:Battery level at: {msg.charge}")
         if msg.charge < 20 and not msg.is_connected:
             self.warning_pub.publish("Battery is low!")
     

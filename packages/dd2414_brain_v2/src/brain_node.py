@@ -15,7 +15,7 @@ class ARI:
         self.last_result = ""
         self.current_intent = ""
         self.emergency_stop = False
-
+        self.string_header = "[BRAIN          ]:"
         self.person_looking_at_ari = ""
         self.timeout = rospy.get_param("~timeout",10)
         self.look_at_person_enable = True
@@ -26,7 +26,7 @@ class ARI:
         
         self._as_go_to_location = actionlib.SimpleActionClient("/nav_move_base_server",brain.BrainAction)
         self._as_text_speech    = actionlib.SimpleActionClient("/text_speech",brain.BrainAction)
-        self._as_save_name      = actionlib.SimpleActionClient("/face_recognition_node", brain.BrainAction)
+        self._as_save_name      = actionlib.SimpleActionClient("/face_recognition", brain.BrainAction)
         self._as_find_speaker   = actionlib.SimpleActionClient("/ari_turn_to_speaker",brain.BrainAction)
         self._as_follow_user    = actionlib.SimpleActionClient("/follow_user",brain.BrainAction)
         self._as_move_to_person = actionlib.SimpleActionClient("/body_orientation_listener",brain.BrainAction)
@@ -46,13 +46,14 @@ class ARI:
                             "greet"                :self.greet,
                             "goodbye"              :self.greet
                             }
+        rospy.loginfo(self.string_header + "Initialized")
         
     def response_cb(self,response_msg):
         self.response_msg = response_msg.data
 
     def run_action(self,intent,input):
         result = ""
-        #rospy.loginfo("BEFORE State: "+ self.current_state + " | Current Action: " + self.current_intent + " | Result: " + self.last_result + " | Intent: " + intent)
+        rospy.logdebug("[BRAIN          ]:BEFORE State: "+ self.current_state + " | Current Action: " + self.current_intent + " | Result: " + self.last_result + " | Intent: " + intent)
         if intent == "stop" or self.emergency_stop: #Give Priority to the Stop Action
             self.current_intent = "stop"
             self.current_state = "Busy"
@@ -76,7 +77,7 @@ class ARI:
             self.current_state = "Done"
             result = self.last_result
             if self.current_intent == "greet" and "name" in self.last_data:
-                rospy.loginfo("Name sent to LLM: " + json.dumps(self.last_data))
+                rospy.logdebug("[BRAIN          ]:Name sent to LLM: " + json.dumps(self.last_data))
                 self.brain_user_name_pub.publish(self.last_data["name"])
 
 
@@ -93,7 +94,8 @@ class ARI:
 
 
         self.brain_state_pub.publish(self.current_state)
-        rospy.loginfo("AFTER  State: "+ self.current_state + " | Current Action: " + self.current_intent + " | Result: " + self.last_result + " | Intent: " + intent)
+    
+        rospy.loginfo("[BRAIN          ]:AFTER  State: "+ self.current_state + " | Current Action: " + self.current_intent + " | Result: " + self.last_result + " | Intent: " + intent)
         return result
     
     def stop (self,input):
@@ -106,8 +108,6 @@ class ARI:
     
     def cb_done(self,state,result):
         self.last_result=result.result
-        #rospy.loginfo(self.current_intent)
-        #rospy.loginfo(result)
         if result.in_dic != '':
             self.last_data = json.loads(result.in_dic)
         else:
@@ -115,7 +115,6 @@ class ARI:
 
     def cb_feedback(self,feedback):
         self.last_result=feedback.feedback
-        #rospy.loginfo(feedback)
         if feedback.in_dic != '':
             self.last_data = json.loads(feedback.in_dic)
         else:
@@ -126,12 +125,13 @@ class ARI:
         
 
     def name_assign(self,input):
+        rospy.logdebug(self.string_header + "Remember User")
         if self._as_save_name.wait_for_server(rospy.Duration(self.timeout)):
-            #rospy.loginfo(input)
             ActionGoal = brain.BrainGoal()
             ActionGoal.goal = input["input"]
             self._as_save_name.send_goal(ActionGoal, done_cb = self.cb_done, active_cb = self.cb_active, feedback_cb = self.cb_feedback)
         else:
+            rospy.logdebug(self.string_header + "Remember User TIMEOUT")
             self.last_result = "Failure"
             self.last_data = {}
         
@@ -140,78 +140,89 @@ class ARI:
         self.person_looking_at_ari = msg.data != ""
 
     def text_to_speech(self,input):
+        rospy.logdebug(self.string_header + "TTS Call")
         if self._as_text_speech.wait_for_server(rospy.Duration(self.timeout)):
         #Change this for the string input.goal
-            rospy.loginfo("TEXT TO SPEECH")
             ActionGoal = brain.BrainGoal()
             ActionGoal.goal = input["input"]
             self._as_text_speech.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
         else:
+            rospy.logdebug(self.string_header + "TTS Call TIMEOUT")
             self.last_result = "Failure"
 
     def go_to_location(self,input):
+        rospy.logdebug(self.string_header + "Go to Location")
         if self._as_go_to_location.wait_for_server(rospy.Duration(self.timeout)):
         #Change this for the string input.goal
-            rospy.loginfo(input)
             ActionGoal = brain.BrainGoal()
             ActionGoal.goal = input["input"]
             self._as_go_to_location.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
         #wait = self._as_go_to_location.wait_for_result()
         #result = self._as_go_to_location.get_result()
         else:
+            rospy.logdebug(self.string_header + "Go to Location TIMEOUT")
             self.last_result = "Failure"
 
     def find_speaker(self, input):
+        rospy.logdebug(self.string_header + "Find Speaker")
         if self._as_find_speaker.wait_for_server(rospy.Duration(self.timeout)):
-            rospy.loginfo("FIND SPEAKER")
             ActionGoal = brain.BrainGoal()
             self._as_find_speaker.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
         else:
+            rospy.logdebug(self.string_header + "Find Speaker TIMEOUT")
             self.last_result = "Failure"
 
     def follow_user(self, input):
+        rospy.logdebug(self.string_header + "Follow User")
         if not self.person_looking_at_ari:
             self.action_dict["find speaker"]({})
         if self._as_follow_user.wait_for_server(rospy.Duration(self.timeout)):
             ActionGoal = brain.BrainGoal()
             self._as_follow_user.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
         else:
+            rospy.logdebug(self.string_header + "Follow User TIMEOUT")
             self.last_result = "Failure"
 
     def move_to_person(self,input):
+        rospy.logdebug(self.string_header + "Move to Person")
         if self._as_move_to_person.wait_for_server(rospy.Duration(self.timeout)):
             ActionGoal = brain.BrainGoal()
             self._as_move_to_person.send_goal(ActionGoal,done_cb=self.cb_done,active_cb=self.cb_active,feedback_cb=self.cb_feedback)
         else:
+            rospy.logdebug(self.string_header + "Move to Person TIMEOUT")
             self.last_result = "Failure" 
 
     def translate(self, input):
+        rospy.logdebug(self.string_header + "Translate")
         if not self.person_looking_at_ari:
             self.action_dict["find speaker"]({})
         if self.person_looking_at_ari :
             self.move_to_person({})
         else:
+            rospy.logdebug(self.string_header + "Translate TIMEOUT")
             self.last_result = "Failure"
         #if move_to_person == "Success" 
 
     def provide_information(self, input):
+        rospy.logdebug(self.string_header + "Provide Information")
         if not self.person_looking_at_ari:
             self.action_dict["find speaker"]({})
         if self.person_looking_at_ari :
             self.move_to_person({})
         else:
+            rospy.logdebug(self.string_header + "Provide Information TIMEOUT")
             self.last_result = "Failure"
 
         #if move_to_person == "Success" 
 
     def greet(self, input):
+        rospy.logdebug(self.string_header + "Greet")
         #Turns to Look at the speaker
         if not self.person_looking_at_ari:
             self.action_dict["find speaker"]({})
         
         #Waits for the server to be available
         if self._as_save_name.wait_for_server(rospy.Duration(self.timeout)):
-                #rospy.loginfo(input)
                 ActionGoal = brain.BrainGoal()
                 ActionGoal.goal = "unknown"
 
@@ -222,9 +233,11 @@ class ARI:
                     self.last_result = "Failure"
                     self.last_data = {"name" : "unknown"}
         else: #If the service was not available or it timed out
+            rospy.logdebug(self.string_header + "Greet TIMEOUT")
             self.last_result = "Failure"
     
     def look_at_person(self,input):
+        rospy.logdebug(self.string_header + "Look At Person")
         if self._as_look_at_pèrson.wait_for_server(rospy.Duration(self.timeout)):
             ActionGoal = brain.BrainGoal()
             ActionGoal.goal = input["input"]
@@ -233,6 +246,8 @@ class ARI:
                 self.look_at_person_enable = True 
             elif ActionGoal.goal == "stop":
                 self.look_at_person_enable = False
+        else:
+            rospy.logdebug(self.string_header + "Look At Person TIMEOUT")
 
 
 
@@ -241,7 +256,7 @@ class ARI:
 #Dont MOVE ANYTING FROM HERE
 class Brain:
     def __init__(self):
-        rospy.loginfo("Brain Start Initializing")
+        rospy.loginfo("[BRAIN          ]:Brain Start Initializing")
 
         self.intent_sub=rospy.Subscriber(rospy.get_param("~IN_intent_topic","~intent"),String, self.intent_cb)
         self.intent_dict = {}
@@ -249,24 +264,26 @@ class Brain:
 
         self.robot = ARI()
 
-        rospy.loginfo("Brain Finished Initializing")
+        rospy.loginfo("[BRAIN          ]:Initialized")
 
     def intent_cb(self,string_msg):
         self.intent_dict = json.loads(string_msg.data)
         self.intent = self.intent_dict["intent"]
+        rospy.logdebug(self.robot.string_header + "CB Intent: " + self.intent)
 
     def run(self):
+        rospy.logdebug(self.robot.string_header + "Intent: " + self.intent)
         result = self.robot.run_action(self.intent,self.intent_dict)
 #        if result == "Success" or result == "Failure":
         self.intent = ""
         
 
     def shutdown (self):
-        rospy.loginfo("Shutting Down Brain Node")
+        rospy.loginfo("[BRAIN          ]:Shutting Down Brain Node")
         self.robot.run_action("stop",{})
 
 if __name__ == '__main__':
-    rospy.init_node('brain',anonymous=False)
+    rospy.init_node('brain',anonymous=False,log_level=rospy.INFO)
     node = Brain()
     rate = rospy.Rate(1)
 

@@ -10,7 +10,7 @@ from ultralytics import YOLO
 
 class HumanDetectionNode:
     def __init__(self):
-        rospy.init_node('human_detection_node', anonymous=True)
+        rospy.init_node('human_detection_node', anonymous=True,log_level=rospy.INFO)
 
         self.bridge = CvBridge()
         self.frame_counter = 0  # Add a frame counter
