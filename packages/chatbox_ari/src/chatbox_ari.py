@@ -25,10 +25,11 @@ class ChatboxARI:
         self.brain_msg_time    = rospy.Time.now().to_sec()
         self.language          = "en_US"
         self.model_ollama      = "mistral:latest"
-        self.stt_model         = whisper.load_model("tiny")
+        self.stt_model         = whisper.load_model("base")
         self.verbose           = rospy.get_param("/verbose",False)
 
         # Audio parameters – adjust according to your setup
+        self.stt_listen   = False
         self.stt_filename = f"/tmp/ARI_stt.wav"
         self.SAMPLE_RATE  = 16000  # Hz
         self.SAMPLE_WIDTH = 2      # 2 bytes = 16-bit audio
@@ -61,7 +62,7 @@ class ChatboxARI:
             "other: If any of the other actions does not fit, the robot has to classify it as other"]
         
         #self.api          = Client(host="http://192.168.0.106:11434")
-        self.api          = Client(host="http://130.229.182.92:11434")
+        self.api          = Client(host="http://130.229.157.65:11434")
         self.system_promt = "You are an office assistant robot caled Ari. Be concise and helpful."
 
         # Publishers
@@ -77,16 +78,21 @@ class ChatboxARI:
         self.calibrate_api()
 
         rospy.loginfo("[LLM            ]:Initialized")
-        self.tts_output("Ready to operate")        
+        self.tts_output("Ready to operate")
+        rospy.sleep(3)     
+        self.stt_listen   = True
 
     def setup_tts(self):
         self.tts_client = SimpleActionClient("/tts",TtsAction)
         self.tts_client.wait_for_server()
 
     def stt(self,msg):
-        if not msg.data:
+        if not msg.data or not self.stt_listen:
             return
         # Open WAV file for writing
+        else:
+            self.stt_listen   = False
+        
         with wave.open(self.stt_filename, 'wb') as wf:
             wf.setnchannels(self.CHANNELS)
             wf.setsampwidth(self.SAMPLE_WIDTH)
@@ -107,8 +113,6 @@ class ChatboxARI:
         if (self.stt_result).lower()  == "start" or (self.stt_result).lower()  == "init":
             self.tts_output("Listening")
             self.listen = True
-            return
-        if not self.listen:
             return
         
         self.process_user_input(self.stt_result)
