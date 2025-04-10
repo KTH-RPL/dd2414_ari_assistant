@@ -1,0 +1,8 @@
+# TextToSpeechMultilanguage.action
+---
+# Result
+bool success
+
+---
+# Feedback
+string status
