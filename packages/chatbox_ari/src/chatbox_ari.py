@@ -7,6 +7,7 @@ import rospy
 import whisper
 import paramiko
 
+from io import BytesIO
 from gtts import gTTS
 from ollama import Client
 from actionlib import SimpleActionClient
@@ -14,7 +15,7 @@ from std_msgs.msg import String
 from hri_msgs.msg import LiveSpeech
 from audio_common_msgs.msg import AudioData
 from pal_interaction_msgs.msg import TtsAction, TtsGoal
-from dd2414_text_speech.msg import TextToSpeechMultilanguageAction
+import dd2414_text_speech.msg as tts
 
 
 
@@ -81,7 +82,7 @@ class ChatboxARI:
         rospy.Subscriber("/brain/user_name",String, self.update_brain_person)
 
         # Action client of TTS Multilanguages
-        self.ac_ttsm = SimpleActionClient('tts_multilanguage', TextToSpeechMultilanguageAction)
+        self.ac_ttsm = SimpleActionClient('tts_multilanguage', tts.TextToSpeechMultilanguageAction)
         self.ac_ttsm.wait_for_server()
 
 
@@ -257,6 +258,7 @@ class ChatboxARI:
     
     def tts_multilanguage_output(self,text):
         tts = gTTS(text, self.stt_language)
+        """
         save_path = os.path.expanduser('/tmp/tts_audio.mp3')
 
         # Save the audio file
@@ -271,9 +273,14 @@ class ChatboxARI:
         sftp.put("/tmp/tts_audio.mp3", "/tmp/tts_audio.mp3")
         sftp.close()
         ssh.close()
-
+        """
+        mp3_fp = BytesIO()
+        tts.write_to_fp(mp3_fp)
+        mp3_fp.seek(0)
+        mp3_bytes = mp3_fp.read()
         # Send goal to TTS Multilanguage server to reproduce audio
-        goal = TextToSpeechMultilanguageGoal()
+        goal = tts.TextToSpeechMultilanguageGoal()
+        goal.data = mp3_bytes
         self.ac_ttsm.send_goal(goal)
 
     def process_user_input(self, user_input):

@@ -1,4 +1,5 @@
 #goal definition
+int8[] data
 ---
 #result definition
 string result
