@@ -278,9 +278,10 @@ class ChatboxARI:
         tts.write_to_fp(mp3_fp)
         mp3_fp.seek(0)
         mp3_bytes = mp3_fp.read()
+
         # Send goal to TTS Multilanguage server to reproduce audio
         goal = tts.TextToSpeechMultilanguageGoal()
-        goal.data = mp3_bytes
+        goal.data = list(mp3_bytes)
         self.ac_ttsm.send_goal(goal)
 
     def process_user_input(self, user_input):

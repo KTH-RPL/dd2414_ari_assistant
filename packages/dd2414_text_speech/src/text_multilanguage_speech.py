@@ -4,6 +4,9 @@ from dd2414_status_update import StatusUpdate
 import simpleaudio as sa
 from actionlib import SimpleActionServer
 import dd2414_text_speech.msg as tts
+from pydub import AudioSegment
+from io import BytesIO
+
 
 
 
@@ -15,8 +18,18 @@ class TextMultilanguageSpeech:
         rospy.loginfo("Text-to-Speech Multilanguage Action Server is running.")
 
     def action_cb(self, goal):
+        rospy.loginfo("Received audio to play from LLM.")
         try:
-            wave_obj = sa.WaveObject.from_wave_file("/tmp/tts_audio.mp3")
+            mp3_bytes = bytes(goal.data)
+            audio = AudioSegment.from_file(BytesIO(mp3_bytes), format="mp3")
+
+            # Export to BytesIO as WAV
+            wav_io = BytesIO()
+            audio.export(wav_io, format="wav")
+            wav_io.seek(0)
+
+            # Now load into simpleaudio
+            wave_obj = sa.WaveObject.from_wave_read(sa.WaveObject._wave_open(wav_io))
             play_obj = wave_obj.play()
             play_obj.wait_done()
         except Exception as e:
