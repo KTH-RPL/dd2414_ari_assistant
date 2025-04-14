@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import re
-import os
+import sys
 import json
 import wave
 import rospy
@@ -32,7 +32,7 @@ class ChatboxARI:
         self.brain_msg_time    = rospy.Time.now().to_sec()
         self.language          = "en_US"
         self.model_ollama      = "mistral:latest"
-        self.stt_model         = whisper.load_model("base")
+        self.stt_model         = whisper.load_model("tiny")
         self.verbose           = rospy.get_param("/verbose",False)
 
         # Audio parameters – adjust according to your setup
@@ -69,7 +69,7 @@ class ChatboxARI:
             "other: If any of the other actions does not fit, the robot has to classify it as other"]
         
         #self.api          = Client(host="http://192.168.0.106:11434")
-        self.api          = Client(host="http://130.229.157.65:11434")
+        self.api          = Client(host="http://130.229.134.112:11434")
         self.system_promt = "You are an office assistant robot caled Ari. Be concise and helpful."
 
         # Publishers
@@ -95,8 +95,10 @@ class ChatboxARI:
         self.stt_listen   = True
 
     def setup_tts(self):
+        rospy.loginfo("Waiting for TTS")
         self.tts_client = SimpleActionClient("/tts",TtsAction)
         self.tts_client.wait_for_server()
+        rospy.loginfo("TTS done")
 
     def stt(self,msg):
         if not msg.data or not self.stt_listen:
@@ -242,9 +244,9 @@ class ChatboxARI:
 
         intent_data = {"intent":intent,"input": parameter}
         self.dictonary_pub.publish(json.dumps(intent_data))
-        rospy.logdebug(f"[LLM            ]:Published intent:{intent}, Input:{parameter}")
+        rospy.loginfo(f"[LLM            ]:Published intent:{intent}, Input:{parameter}")
 
-        self.wait_for_brain(rospy.Time.now().to_sec())
+        #################################################################################################################################3self.wait_for_brain(rospy.Time.now().to_sec())
 
     def reject_message(self):
         return "I could not understand, please say it again."
@@ -262,6 +264,8 @@ class ChatboxARI:
         goal.data = text
         goal.lang = self.stt_language
         self.ac_ttsm.send_goal(goal)
+        rospy.loginfo("Sent to TTS multilanguage.")
+        sys.exit(0)
 
     def process_user_input(self, user_input):
         query         = self.build_intent_query(user_input)
@@ -286,6 +290,7 @@ class ChatboxARI:
             parameter, response = self.process_intent(intent_ollama, intent_result, user_input)
             rospy.loginfo(f"[LLM            ]:Ollama response: {response}")
             self.listen = False
+            rospy.loginfo(f"STT language: {self.stt_language}")
             if self.stt_language == "en":
                 self.tts_output(response)
             else:
