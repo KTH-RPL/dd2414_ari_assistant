@@ -257,31 +257,10 @@ class ChatboxARI:
 
     
     def tts_multilanguage_output(self,text):
-        tts = gTTS(text, self.stt_language)
-        """
-        save_path = os.path.expanduser('/tmp/tts_audio.mp3')
-
-        # Save the audio file
-        tts.save(save_path)
-
-        # Send audio to robot
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect("192.168.128.28", username="pal", password="pal")
-
-        sftp = ssh.open_sftp()
-        sftp.put("/tmp/tts_audio.mp3", "/tmp/tts_audio.mp3")
-        sftp.close()
-        ssh.close()
-        """
-        mp3_fp = BytesIO()
-        tts.write_to_fp(mp3_fp)
-        mp3_fp.seek(0)
-        mp3_bytes = mp3_fp.read()
-
         # Send goal to TTS Multilanguage server to reproduce audio
         goal = tts.TextToSpeechMultilanguageGoal()
-        goal.data = list(mp3_bytes)
+        goal.data = text
+        goal.lang = self.stt_language
         self.ac_ttsm.send_goal(goal)
 
     def process_user_input(self, user_input):
