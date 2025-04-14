@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import re
-import os
+import sys
 import json
 import wave
 import rospy
@@ -32,7 +32,7 @@ class ChatboxARI:
         self.brain_msg_time    = rospy.Time.now().to_sec()
         self.language          = "en_US"
         self.model_ollama      = "mistral:latest"
-        self.stt_model         = whisper.load_model("base")
+        self.stt_model         = whisper.load_model("tiny")
         self.verbose           = rospy.get_param("/verbose",False)
 
         # Audio parameters – adjust according to your setup
@@ -69,7 +69,7 @@ class ChatboxARI:
             "other: If any of the other actions does not fit, the robot has to classify it as other"]
         
         #self.api          = Client(host="http://192.168.0.106:11434")
-        self.api          = Client(host="http://130.229.146.252:11434")
+        self.api          = Client(host="http://130.229.134.112:11434")
         self.system_promt = "You are an office assistant robot caled Ari. Be concise and helpful."
 
         # Publishers
@@ -82,7 +82,7 @@ class ChatboxARI:
         rospy.Subscriber("/brain/user_name",String, self.update_brain_person)
 
         # Action client of TTS Multilanguages
-        self.ac_ttsm = SimpleActionClient('tts_multilanguage', tts.TextToSpeechMultilanguageAction)
+        self.ac_ttsm = SimpleActionClient('text_multilanguage_speech', tts.TextToSpeechMultilanguageAction)
         self.ac_ttsm.wait_for_server()
 
 
@@ -95,8 +95,10 @@ class ChatboxARI:
         self.stt_listen   = True
 
     def setup_tts(self):
+        rospy.loginfo("Waiting for TTS")
         self.tts_client = SimpleActionClient("/tts",TtsAction)
         self.tts_client.wait_for_server()
+        rospy.loginfo("TTS done")
 
     def stt(self,msg):
         if not msg.data or not self.stt_listen:
@@ -242,9 +244,9 @@ class ChatboxARI:
 
         intent_data = {"intent":intent,"input": parameter}
         self.dictonary_pub.publish(json.dumps(intent_data))
-        rospy.logdebug(f"[LLM            ]:Published intent:{intent}, Input:{parameter}")
+        rospy.loginfo(f"[LLM            ]:Published intent:{intent}, Input:{parameter}")
 
-        self.wait_for_brain(rospy.Time.now().to_sec())
+        #########################################################################################################################################################################3self.wait_for_brain(rospy.Time.now().to_sec())
 
     def reject_message(self):
         return "I could not understand, please say it again."
@@ -257,7 +259,6 @@ class ChatboxARI:
 
     
     def tts_multilanguage_output(self,text):
-        tts = gTTS(text, self.stt_language)
         """
         save_path = os.path.expanduser('/tmp/tts_audio.mp3')
 
@@ -274,15 +275,20 @@ class ChatboxARI:
         sftp.close()
         ssh.close()
         """
-        mp3_fp = BytesIO()
-        tts.write_to_fp(mp3_fp)
-        mp3_fp.seek(0)
-        mp3_bytes = mp3_fp.read()
+        rospy.loginfo("TTS MULTILANGUAGE")
+        #mp3_fp = BytesIO()
+        #tts_audio = gTTS(str(text), lang=str(self.stt_language))
+        #tts_audio.write_to_fp(mp3_fp)
+        #mp3_fp.seek(0)
+        #mp3_bytes = mp3_fp.read()
+        #rospy.loginfo("Bytes obtained")
 
         # Send goal to TTS Multilanguage server to reproduce audio
         goal = tts.TextToSpeechMultilanguageGoal()
-        goal.data = list(mp3_bytes)
+        goal.data = str(text)
         self.ac_ttsm.send_goal(goal)
+        rospy.loginfo("Sent to TTS multilanguage.")
+        sys.exit(0)
 
     def process_user_input(self, user_input):
         query         = self.build_intent_query(user_input)
@@ -307,6 +313,7 @@ class ChatboxARI:
             parameter, response = self.process_intent(intent_ollama, intent_result, user_input)
             rospy.loginfo(f"[LLM            ]:Ollama response: {response}")
             self.listen = False
+            rospy.loginfo(f"STT language: {self.stt_language}")
             if self.stt_language == "en":
                 self.tts_output(response)
             else:
