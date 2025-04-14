@@ -12,7 +12,7 @@ from io import BytesIO
 
 class TextMultilanguageSpeech:
     def __init__(self):
-        self._as = SimpleActionServer('tts_multilanguage', tts.TextToSpeechMultilanguageAction, execute_cb=self.action_cb)
+        self._as = SimpleActionServer('text_multilanguage_speech', tts.TextToSpeechMultilanguageAction, execute_cb=self.action_cb)
 
         self._as.start()  # Initialize ros service
         rospy.loginfo("Text-to-Speech Multilanguage Action Server is running.")
@@ -32,11 +32,10 @@ class TextMultilanguageSpeech:
             wave_obj = sa.WaveObject.from_wave_read(sa.WaveObject._wave_open(wav_io))
             play_obj = wave_obj.play()
             play_obj.wait_done()
+            self._as.set_succeeded()
         except Exception as e:
             rospy.logerr(f"Failed to play audio: {e}")
-
-    def preempted(self):
-        pass
+            self._as.set_aborted()
 
 
 if __name__=="__main__":

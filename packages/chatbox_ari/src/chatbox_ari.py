@@ -82,7 +82,7 @@ class ChatboxARI:
         rospy.Subscriber("/brain/user_name",String, self.update_brain_person)
 
         # Action client of TTS Multilanguages
-        self.ac_ttsm = SimpleActionClient('tts_multilanguage', tts.TextToSpeechMultilanguageAction)
+        self.ac_ttsm = SimpleActionClient('text_multilanguage_speech', tts.TextToSpeechMultilanguageAction)
         self.ac_ttsm.wait_for_server()
 
 
