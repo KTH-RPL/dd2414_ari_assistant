@@ -276,14 +276,14 @@ class ChatboxARI:
         audio.export(self.wav_path, format="wav")
 
         # Copy audio file to ARI
-        command = ["sshpass", "-p", "pal", "scp", "/tmp/tts_audio_test_wav.wav", "pal@192.168.128.28:/tmp/"]
+        command = ["sshpass", "-p", "pal", "scp", "/tmp/tts_audio_wav.wav", "pal@192.168.128.28:/tmp/"]
         subprocess.run(command)
         
         # Call the action server
         goal = tts.TextToSpeechMultilanguageGoal()
         goal.data = text
         goal.lang = self.stt_language
-        
+
         # Send audio goal
         self.ac_ttsm.send_goal(self.wav_path)
         rospy.loginfo("Sent to TTS multilanguage.")
