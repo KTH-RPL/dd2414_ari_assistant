@@ -46,8 +46,8 @@ class ChatboxARI:
         self.CHANNELS     = 1      # Mono
         self.stt_result   = ""
         self.stt_language = "en"
-        self.mp3_path     = os.path.expanduser('/tmp/tts_audio_test.mp3')
-        self.wav_path     = os.path.expanduser('/tmp/tts_audio_test_wav.wav')
+        self.mp3_path     = os.path.expanduser('/tmp/tts_audio.mp3')
+        self.wav_path     = os.path.expanduser('/tmp/tts_audio_wav.wav')
 
         self.intents = {         #Action/Split
             "greet"              :[False,False],
@@ -276,7 +276,7 @@ class ChatboxARI:
         audio.export(self.wav_path, format="wav")
 
         # Copy audio file to ARI
-        command = ["sshpass", "-p", "pal", "scp", "/tmp/tts_audio_wav.wav", "pal@192.168.128.28:/tmp/"]
+        command = ["sshpass", "-p", "pal", "scp", self.wav_path, "pal@192.168.128.28:/tmp/"]
         subprocess.run(command)
         
         # Call the action server
