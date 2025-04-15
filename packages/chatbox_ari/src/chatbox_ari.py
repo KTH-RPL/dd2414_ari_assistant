@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 import re
+import os
 import sys
 import json
 import wave
 import rospy
 import whisper
 import paramiko
+import subprocess
 
 from io import BytesIO
 from gtts import gTTS
+from pydub import AudioSegment
 from ollama import Client
 from actionlib import SimpleActionClient
 from std_msgs.msg import String
@@ -43,6 +46,8 @@ class ChatboxARI:
         self.CHANNELS     = 1      # Mono
         self.stt_result   = ""
         self.stt_language = "en"
+        self.mp3_path     = os.path.expanduser('/tmp/tts_audio_test.mp3')
+        self.wav_path     = os.path.expanduser('/tmp/tts_audio_test_wav.wav')
 
         self.intents = {         #Action/Split
             "greet"              :[False,False],
@@ -82,8 +87,10 @@ class ChatboxARI:
         rospy.Subscriber("/brain/user_name",String, self.update_brain_person)
 
         # Action client of TTS Multilanguages
+        rospy.loginfo("Action Server")
         self.ac_ttsm = SimpleActionClient('text_multilanguage_speech', tts.TextToSpeechMultilanguageAction)
         self.ac_ttsm.wait_for_server()
+        rospy.loginfo("Action Server Working")
 
 
         self.setup_tts()
@@ -259,13 +266,27 @@ class ChatboxARI:
 
     
     def tts_multilanguage_output(self,text):
-        # Send goal to TTS Multilanguage server to reproduce audio
+        tts_audio = gTTS(text,lang=self.stt_language)
+
+        # Save the audio file
+        tts_audio.save(self.mp3_path)
+
+        # Convert to WAV
+        audio = AudioSegment.from_mp3(self.mp3_path)
+        audio.export(self.wav_path, format="wav")
+
+        # Copy audio file to ARI
+        command = ["sshpass", "-p", "pal", "scp", "/tmp/tts_audio_test_wav.wav", "pal@192.168.128.28:/tmp/"]
+        subprocess.run(command)
+        
+        # Call the action server
         goal = tts.TextToSpeechMultilanguageGoal()
         goal.data = text
         goal.lang = self.stt_language
-        self.ac_ttsm.send_goal(goal)
+        
+        # Send audio goal
+        self.ac_ttsm.send_goal(self.wav_path)
         rospy.loginfo("Sent to TTS multilanguage.")
-        sys.exit(0)
 
     def process_user_input(self, user_input):
         query         = self.build_intent_query(user_input)
