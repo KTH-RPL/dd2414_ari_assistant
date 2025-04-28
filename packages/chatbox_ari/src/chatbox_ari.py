@@ -126,7 +126,7 @@ class ChatboxARI:
         if (self.stt_result).lower() == "stop":
             self.tts_output("Stopping")
             self.listen = False
-            self.publish_intent("stop","","Stopping","en")
+            self.publish_intent("stop","","Stopping")
             return
         
         if not self.listen:
