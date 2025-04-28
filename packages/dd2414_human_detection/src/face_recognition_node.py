@@ -12,6 +12,8 @@ import json
 import numpy as np
 from dd2414_status_update import StatusUpdate
 import dd2414_brain_v2.msg as brain
+from geometry_msgs.msg import Point
+from pal_zoi_detector.srv import GetPointZoI, GetPointZoIRequest
 
 
 
@@ -96,7 +98,7 @@ class FaceRecognitionNode:
                     rospy.logerr(f"Error decoding JSON: {e}")
         else:
             rospy.logwarn(f"Face database file {self.encodings_file} does not exist.")
-        return {"encodings": {}, "ids": [], "names": [], "locations": []}
+        return {"encodings": {}, "ids": [], "names": [], "coordinates": [], "room": [] }
 
 
     
@@ -108,7 +110,8 @@ class FaceRecognitionNode:
                       for key, encodings in self.known_faces["encodings"].items()},
             'ids': self.known_faces["ids"],
             'names': self.known_faces["names"],
-            'locations': self.known_faces["locations"]
+            'coordinates': self.known_faces["coordinates"],
+            'room': self.known_faces["room"]
         }
         
         try:
@@ -212,7 +215,8 @@ class FaceRecognitionNode:
             self.known_faces["encodings"][new_id] = self.face_encoding_buffer[new_id]
             self.known_faces["ids"].append(new_id)
             self.known_faces["names"].append(name)
-            self.known_faces["locations"].append({})
+            self.known_faces["coordinates"].append({})
+            self.known_faces["room"].append(None)
 
             # Save encoding and names to the database
             self.save_known_faces()
@@ -257,10 +261,20 @@ class FaceRecognitionNode:
 
                 (t_face,r_face) = self._tf_Listener.lookupTransform("map",face.frame,rospy.Time(0))
 
-                self.known_faces["locations"][index] = {
-                    "x": round(t_face[0], 1),  
-                    "y": round(t_face[1], 1)
+                x = round(t_face[0], 1)
+                y = round(t_face[1], 1)
+                z = 0
+
+                self.known_faces["coordinates"][index] = {
+                    "x": x,  
+                    "y": y
                 }
+
+                # Save the room that corresponds to that location
+                room = self.get_zoi_for_point(x, y, z)
+
+                self.known_faces["room"][index] = room
+
                 self.save_known_faces()
 
         else:
@@ -287,6 +301,37 @@ class FaceRecognitionNode:
             return name
         
         return
+    
+    def get_zoi_for_point(self, x, y, z):
+        """
+        Calls the /get_zoi service, passing a point (x, y, z),
+        and returns the resulting Zone of Interest (ZoI).
+        """
+        # Wait for the service to be available
+        rospy.wait_for_service('/get_zoi')
+
+        try:
+            # Create a service proxy for the GetPointZoI service
+            get_zoi = rospy.ServiceProxy('/get_zoi', GetPointZoI)
+
+            # Create the Point message with the coordinates (x, y, z)
+            point = Point(x, y, z)
+
+            # Call the service with the point and get the response
+            response = get_zoi(point)
+
+            # Access the first zone of interest (zois is a list)
+            if response.zois:
+                zone_of_interest = response.zois[0]  # Get the first ZoI string
+                rospy.loginfo(f"Zone of Interest: {zone_of_interest}")
+                return zone_of_interest
+            else:
+                rospy.logwarn("No zones of interest returned.")
+                return None
+
+        except rospy.ServiceException as e:
+            rospy.logerr("Service call failed: %s" % e)
+            return None
 
 
 
