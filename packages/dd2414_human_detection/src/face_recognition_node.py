@@ -321,8 +321,8 @@ class FaceRecognitionNode:
             response = get_zoi(point)
 
             # Access the first zone of interest (zois is a list)
-            if response.zois:
-                zone_of_interest = response.zois[0]  # Get the first ZoI string
+            if response.zois.zois:
+                zone_of_interest = response.zois.zois[0]  # Get the first ZoI string
                 rospy.loginfo(f"Zone of Interest: {zone_of_interest}")
                 return zone_of_interest
             else:
