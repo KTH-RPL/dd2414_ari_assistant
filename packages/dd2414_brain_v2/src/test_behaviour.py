@@ -10,22 +10,26 @@ class TestBehaviour(py_trees.behaviour.Behaviour):
     def __init__(self, name: str):
 
         super(TestBehaviour, self).__init__(name=name)
-
-        print('hello1')
+        
+        self.blackboard = py_trees.blackboard.Blackboard()
         self.counter = 0
 
     def setup(self, timeout):
-        print('hello2')
         rospy.logdebug("[TestBehaviour] {}.setup()".format(self.name))
-
-        self.feedback_message = "publisher created"
+        self.feedback_message = "behaviour created"
         return True
 
     def update(self) -> py_trees.common.Status:
-
+        print(self.name)
         self.counter+=1
+
+        # INPUTS print('---------', self.blackboard.inputs[self.name])
+
+        # When behaviour is done
         if(self.counter > 10):
+            self.blackboard.set(self.name, False)
             self.feedback_message = "success"
+            counter = 0
             return py_trees.common.Status.SUCCESS
 
         rospy.logdebug("%s.update()" % self.__class__.__name__)
