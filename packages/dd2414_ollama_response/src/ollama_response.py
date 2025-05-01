@@ -10,17 +10,22 @@ from gtts import gTTS
 from pydub import AudioSegment
 from ollama import Client
 from actionlib import SimpleActionClient
+from std_msgs.msg import String
 from dd2414_status_update import StatusUpdate
 
 class OllamaResponse:
     def __init__(self):
-        self.ip_ollama    = Client(host="http://130.229.134.112:11434")
+        self.ip_ollama    = Client(host="http://130.229.175.162:11434")
         self.model_ollama = "mistral:latest"
         self.languages    = ["en:English","es:Spanish","de:German","fr:French","sv:Swedish"]
         self.system_promt = "You are an office assistant robot called ARI. Be concise and helpful. " \
         "These are the languages with their corresponding abreviation: " + ' '.join(self.languages) + ""
         self.result       = brain.BrainResult()
         self.tts_goal     = tts.TextToSpeechMultilanguageGoal()
+
+        self.brain_person_name = "unknown"
+
+        rospy.Subscriber("/brain/user_name",String,self.update_brain_person)
 
         self.ac_ttsm = SimpleActionClient('text_multilanguage_speech', tts.TextToSpeechMultilanguageAction)
         self.ac_ttsm.wait_for_server()
@@ -31,11 +36,19 @@ class OllamaResponse:
         rospy.loginfo("[Ollama Response]:Initialized")
         self.string_header = "[Ollama Response]:"
 
+    def update_brain_person(self,msg):
+        if not msg.data:
+            self.brain_person_name = "unknown"
+        else:
+            self.brain_person_name = msg.data
+
     def action(self,goal):
-        language = json.loads(goal.in_dic)
-        language = language["language"]
+        dictonary = json.loads(goal.in_dic)
+        language  = dictonary["language"]
+        intent    = dictonary["intent"]
+        phrase    = dictonary["phrase"]
         
-        return self.generate_response(goal.goal,language)
+        return self.generate_response(goal.goal,language,intent)
 
     def preempted(self):
         pass
@@ -54,16 +67,21 @@ class OllamaResponse:
         command = ["sshpass", "-p", "pal", "scp", self.wav_path, "pal@192.168.128.28:/tmp/"]
         subprocess.run(command)
 
-    def generate_response(self,user_input,language):
+    def generate_response(self,user_input,language,intent):
+        name_promt = ""
+        if intent in ["greet","goodbye"] and self.brain_person_name != "unknown":
+            name_promt = "My name is: " + self.brain_person_name + ". Include it in your response."
+
         completion = self.api.chat(
             model=self.model_ollama, 
             messages=[
-            {"role":"system","content": self.system_promt + f" Respond in:{language}"},
+            {"role":"system","content": self.system_promt + name_promt +f" Respond in:{language}"},
             {"role":"user","content": user_input},
             ]
         )
 
         response = completion.message.content
+        rospy.loginfo(f"[Response Ollama]:User said: {response}")
 
         if language != "en":
             self.tts_multilanguage_output(response,language)

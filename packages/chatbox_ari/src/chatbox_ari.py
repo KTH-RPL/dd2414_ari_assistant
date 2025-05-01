@@ -4,6 +4,7 @@ import os
 import sys
 import json
 import wave
+import torch
 import rospy
 import whisper
 import paramiko
@@ -17,24 +18,21 @@ from ollama import Client
 from actionlib import SimpleActionClient
 from std_msgs.msg import String
 from hri_msgs.msg import LiveSpeech
+from deep_translator import GoogleTranslator
 from audio_common_msgs.msg import AudioData
 from pal_interaction_msgs.msg import TtsAction, TtsGoal
 
-
 class ChatboxARI:
     def __init__(self):
-        rospy.init_node("chatbox_ari",log_level=rospy.INFO)
         self.rate              = rospy.Rate(1)
-        #self.listen            = True
+        self.listen            = False
+        self.ready_to_process  = True
+        self.data              = None
         self.string_header     = "[LLM            ]:"
-        #self.stop              = False
-        self.brain_state_data  = "Busy"
+        self.languages         = ["en","es","de","fr","sv"]
         self.ari_speeking      = ""
-        self.brain_person_name = "unknown"
-        self.brain_msg_time    = rospy.Time.now().to_sec()
-        self.language          = "en_US"
         self.model_ollama      = "mistral:latest"
-        self.stt_model         = whisper.load_model("tiny")
+        self.stt_model         = whisper.load_model("small")
         self.verbose           = rospy.get_param("/verbose",False)
 
         # Audio parameters – adjust according to your setup
@@ -72,8 +70,7 @@ class ChatboxARI:
             "translate: The robot has to help the user to translate sentences or a conversation", 
             "other: If any of the other actions does not fit, the robot has to classify it as other"]
         
-        #self.api          = Client(host="http://192.168.0.106:11434")
-        self.api          = Client(host="http://130.229.134.112:11434")
+        self.api          = Client(host="http://130.229.175.162:11434")
         self.system_promt = "You are an office assistant robot caled Ari. Be concise and helpful."
 
         # Publishers
@@ -81,122 +78,45 @@ class ChatboxARI:
 
         # Subscribers
         #rospy.Subscriber("/humans/voices/anonymous_speaker/speech",LiveSpeech,self.asr_result)
-        rospy.Subscriber("/audio/speech", AudioData, self.stt)
-        rospy.Subscriber("/brain/state",String,self.update_brain_state)
-        rospy.Subscriber("/brain/user_name",String,self.update_brain_person)
+        rospy.Subscriber("/audio/speech", AudioData, self.stt, queue_size=1,)
         rospy.Subscriber("/tts/ARI_speeking",String,self.ari_speeking_state)
 
         # Action client of TTS Multilanguages
         self.ac_ttsm = SimpleActionClient('text_multilanguage_speech', tts.TextToSpeechMultilanguageAction)
         self.ac_ttsm.wait_for_server()
+        rospy.loginfo("[LLM            ]:MULTILANGUAGE UP")
 
         self.setup_tts()
         self.calibrate_api()
 
         rospy.loginfo("[LLM            ]:Initialized")
+        self.tts_output("Ready to operate")
+
         rospy.sleep(3) 
-        self.tts_output("Ready to operate")    
-        
-        #self.stt_listen   = True
+        self.listen   = True
 
     def setup_tts(self):
         self.tts_client = SimpleActionClient("/tts",TtsAction)
         self.tts_client.wait_for_server()
+        rospy.loginfo("[LLM            ]:TTS UP")
 
-    def stt(self,msg):
-        if not msg.data or self.ari_speeking == "speeking":
-            return
-        # Open WAV file for writing
-        else:
-            self.stt_listen   = False
-        
-        with wave.open(self.stt_filename, 'wb') as wf:
-            wf.setnchannels(self.CHANNELS)
-            wf.setsampwidth(self.SAMPLE_WIDTH)
-            wf.setframerate(self.SAMPLE_RATE)
-            wf.writeframes(msg.data)  # msg.data is a bytes object
-        #rospy.loginfo(f"Saved audio to {self.stt_filename}")
-
-        result            = self.stt_model.transcribe(self.stt_filename)
-        self.stt_result   = result["text"]
-        self.stt_language = result["language"]
-
-        rospy.loginfo(f"[LLM            ]:User said: {self.stt_result}")
-
-        if (self.stt_result).lower() == "stop":
-            self.tts_output("Stopping")
-            self.listen = False
-            self.publish_intent("stop","","Stopping")
-            return
-        
-        if not self.listen:
-            return 
-
-        if (self.stt_result).lower()  == "start" or (self.stt_result).lower()  == "init":
-            self.tts_output("Listening")
-            self.listen = True
-            return
-        
-        self.listen   = False
-        self.process_user_input(self.stt_result)
-
-    def calibrate_api(self):
-        rospy.loginfo("[LLM            ]:Initializing calibraton...")
-        test_sentences = ["Hello","Find the red ball", "Hello, I am Joshua"]
-
-        for msg in test_sentences:
-            query = self.build_intent_query(msg)
-            self.ask_ollama(query)
-
-        rospy.loginfo("[LLM            ]:Calibraton done")
+    def tts_output(self,text):
+        self.listen          = False
+        self.ari_speeking    = "speeking"
+        goal                 = TtsGoal()
+        goal.rawtext.lang_id = "en_US"
+        goal.rawtext.text    = text
+        self.tts_client.send_goal_and_wait(goal)
+        self.tts_client.wait_for_result()
+        rospy.loginfo("Done")
+        self.ari_speeking    = ""
 
     def ari_speeking_state(self,msg):
         self.ari_speeking = msg.data
 
-    def update_brain_state(self,msg):
-        self.brain_state_data = msg.data
-        self.brain_msg_time   = rospy.Time.now().to_sec()
+    def reject_message(self):
+        self.tts_output("I could not understand, please say it again.")
 
-    def update_brain_person(self,msg):
-        self.brain_person_name = msg.data
-
-    #def asr_result(self,msg):
-    #    if not msg.final:
-    #        return
-    #    rospy.loginfo(f"[LLM            ]:User said: {msg.final}")
-    #    if (msg.final).lower() == "stop":
-    #        self.tts_output("Stopping")
-    #        self.listen = False
-    #        self.publish_intent("stop","")
-    #        return
-    #    if (msg.final).lower()  == "start" or (msg.final).lower()  == "init":
-    #        self.tts_output("Listening")
-    #        self.listen = True
-    #        return
-    #    if not self.listen:
-    #        return
-    #    
-    #    self.process_user_input(msg.final)
-
-    def wait_for_brain(self,actual_time):
-        while (self.brain_state_data != "Idle" ) or (self.brain_state_data == "Idle" and (self.brain_msg_time - actual_time) < 2.2 ): 
-            rospy.sleep(1.0)
-            rospy.logdebug(f"[LLM            ]:Waiting for brain: {self.brain_state_data}")
-
-        rospy.logdebug(f"[LLM            ]:State:{self.brain_state_data}, Diff: {self.brain_msg_time - actual_time}")
-
-    def ask_ollama(self, msg, promt=""):
-        completion = self.api.chat(
-            model=self.model_ollama, 
-            messages=[
-            {"role":"system","content": self.system_promt + promt},
-            {"role":"user","content": msg},
-            ]
-        )
-
-        return completion.message.content
-    
-    
     def build_intent_query(self, user_input):
         
         msg = ["The robot needs to execute one of the following actions:", ' '.join(list(self.intents.keys())), 
@@ -208,7 +128,28 @@ class ChatboxARI:
                " if it is \"remember user\" return \"remember user:user_name\""]
         msg = ' '.join(msg)
         return msg
-    
+
+    def ask_ollama(self, msg, promt=""):
+        completion = self.api.chat(
+            model=self.model_ollama, 
+            messages=[
+            {"role":"system","content": self.system_promt + promt},
+            {"role":"user","content": msg},
+            ]
+        )
+
+        return completion.message.content
+
+    def calibrate_api(self):
+        rospy.loginfo("[LLM            ]:Initializing calibraton...")
+        test_sentences = ["Hello","Find the red ball", "Hello, I am Joshua"]
+
+        for msg in test_sentences:
+            query = self.build_intent_query(msg)
+            self.ask_ollama(query)
+
+        rospy.loginfo("[LLM            ]:Calibraton done")
+
     def extract_intent(self, intent_ollama):
         # Check this, as sometimes it fails to return the first one.
         if "greet" in intent_ollama.split():
@@ -222,7 +163,64 @@ class ChatboxARI:
             
         return "No match found"
     
-    def process_intent(self, intent_ollama, intent_result, user_input):
+    
+    def publish_intent(self, intent, parameter,response):
+        intent_data = {"intent":intent,"input":parameter,"phrase":response,"language":self.stt_language}
+        self.dictonary_pub.publish(json.dumps(intent_data))
+        rospy.loginfo(f"[LLM            ]:Published intent:{intent}, Input:{parameter}, Phrase:{response}, Lang:{self.stt_language}")
+
+    def stt(self,msg):
+        self.data = msg.data
+        if self.listen:
+            self.ready_to_process = True
+        else:
+            self.data = None
+            return
+        
+    def run_stt(self):
+        if not self.data or self.ari_speeking == "speeking":
+            return
+        
+        self.listen= False
+        # Open WAV file for writing
+        with wave.open(self.stt_filename, 'w') as wf:
+            wf.setnchannels(self.CHANNELS)
+            wf.setsampwidth(self.SAMPLE_WIDTH)
+            wf.setframerate(self.SAMPLE_RATE)
+            wf.writeframes(self.data)  # msg.data is a bytes object
+            wf.close
+        #rospy.loginfo(f"Saved audio to {self.stt_filename}")
+
+        result            = self.stt_model.transcribe(self.stt_filename)
+        self.stt_result   = result["text"]
+        self.stt_language = result["language"]
+
+        if "stop" in (self.stt_result).lower():
+            self.listen = False
+            self.ready_to_process = False
+            self.tts_output("Stopping")
+            self.publish_intent("stop","","Stopping")
+
+        if "start" in (self.stt_result).lower()  or "init" in (self.stt_result).lower():
+            self.tts_output("Listening")
+            self.listen = True
+            self.ready_to_process = False
+
+        if not self.stt_language in self.languages:
+            self.reject_message()
+            self.listen = True
+            self.ready_to_process = False
+        
+        if self.ready_to_process:
+            rospy.loginfo(f"[LLM            ]:User said: {self.stt_result}, {self.stt_language}")
+            self.process_user_input(self.stt_result)
+            self.listen      = True
+            self.ready_to_process = False
+        
+        self.data = None
+            
+
+    def process_intent(self, intent_ollama, intent_result, user_input, user_input_translated):
         parameter = "unknown"
         response  = ""
 
@@ -231,106 +229,66 @@ class ChatboxARI:
         
         if self.intents[intent_result][1] and ":" in intent_ollama:
             parameter = intent_ollama.split(":")[-1].strip().lower().replace("the ","").replace("\"","").replace(".","")
+            aux = parameter.split()
+            if len(aux) > 2:
+                return "", ""
+            
             response  = response + f" Objective: {parameter}"
 
         if not self.intents[intent_result][0]:
-            if intent_result == "provide information":
-                response = self.ask_ollama(f"{user_input}. Response in 15 words")
+            if intent_result == "provide information" or intent_result == "remember user":
+                response = self.ask_ollama(f"{user_input_translated}. Response in 15 words")
+                if self.stt_language != 'en':
+                    response = GoogleTranslator(source='en', target=self.stt_language).translate(user_input)
             else:
-                response = self.ask_ollama(f"{user_input}. Response in 15 words",f"Use my name in your response, my name is: {self.brain_person_name}")
+                response = user_input
 
 
         return parameter, response
-    
-    def publish_intent(self, intent, parameter,response):
-        self.listen = False
-        #intent_data = {"intent":intent,"input": parameter}
-        #self.dictonary_pub.publish(json.dumps(intent_data))
-        #rospy.loginfo(f"Published speech intent: {response}")
-
-        #if intent not in {"greet","goodbye","provide informaton","translate"}:
-        #    intent_data = {"intent":intent, "input":parameter}
-        #    self.dictonary_pub.publish(json.dumps(intent_data))
-        #    rospy.loginfo(f"Published intent: {intent} with parameter: {parameter}")
-
-        intent_data = {"intent":intent,"input":parameter,"phrase":response,"language":self.stt_language}
-        self.dictonary_pub.publish(json.dumps(intent_data))
-        rospy.loginfo(f"[LLM            ]:Published intent:{intent}, Input:{parameter}, Phrase:{response}, Lang:{self.stt_language}")
-
-        #################################################################################################################################3self.wait_for_brain(rospy.Time.now().to_sec())
-
-    def reject_message(self):
-        return "I could not understand, please say it again."
-
-    def tts_output(self,text):
-        goal                 = TtsGoal()
-        goal.rawtext.lang_id = self.language
-        goal.rawtext.text    = text
-        self.tts_client.send_goal(goal)
-
-    
-    def tts_multilanguage_output(self,text):
-        tts_audio = gTTS(text,lang=self.stt_language)
-
-        # Save the audio file
-        tts_audio.save(self.mp3_path)
-
-        # Convert to WAV
-        audio = AudioSegment.from_mp3(self.mp3_path)
-        audio.export(self.wav_path, format="wav")
-
-        # Copy audio file to ARI
-        command = ["sshpass", "-p", "pal", "scp", self.wav_path, "pal@192.168.128.28:/tmp/"]
-        subprocess.run(command)
-        
-        # Call the action server
-        goal = tts.TextToSpeechMultilanguageGoal()
-        goal.data = text
-        goal.lang = self.stt_language
-
-        # Send audio goal
-        self.ac_ttsm.send_goal(self.wav_path)
-        rospy.loginfo("Sent to TTS multilanguage.")
 
     def process_user_input(self, user_input):
-        query         = self.build_intent_query(user_input)
+        
+        if self.stt_language != "en":
+            user_input_translated = GoogleTranslator(source=self.stt_language, target='en').translate(user_input)
+        else:
+            user_input_translated = user_input
+        rospy.loginfo("[LLM            ]:User said: "+str(user_input_translated))
+        query         = self.build_intent_query(user_input_translated)
         intent_ollama = self.ask_ollama(query)
-        #rospy.loginfo("Intent ollama:",intent_ollama)
+    
         rospy.logdebug(self.string_header + intent_ollama)
         intent_result = self.extract_intent(intent_ollama)
         rospy.loginfo(self.string_header + intent_result)
 
         if intent_result in {"No match found","other"}:
-            #self.listen = False
-            response = self.reject_message()
-            if self.stt_language == "en":
-                self.tts_output(response)
-            else:
-                self.tts_multilanguage_output(response)
+            self.reject_message()
 
         else:
-            if intent_result in ["greet","goodbye"]:
-                self.publish_intent(intent_result,"")
 
-            parameter, response = self.process_intent(intent_ollama, intent_result, user_input)
+            parameter, response = self.process_intent(intent_ollama, intent_result, user_input,user_input_translated)
+            if parameter == "" and response == "":
+                self.reject_message()
+                return 
+            
             rospy.loginfo(f"[LLM            ]:Ollama response: {response}")
-            #self.listen = False
             rospy.loginfo(f"STT language: {self.stt_language}")
-            if self.stt_language == "en":
-                self.tts_output(response)
-            else:
-                self.tts_multilanguage_output(response)
+            
+            self.publish_intent(intent_result, parameter,response)
 
-            if intent_result not in ["greet","goodbye"]:
-                self.publish_intent(intent_result, parameter)
-
-        self.listen      = True
-        #self.stt_listen  = True
-        return response
+        return
     
 if __name__ == '__main__':
+
     try:
-        ChatboxARI()
-        rospy.spin()
+        rospy.init_node("chatbox_ari",log_level=rospy.INFO)
+        rate =rospy.Rate(1)
+        node=ChatboxARI()
+        while not rospy.is_shutdown():
+            node.run_stt()
+            rate.sleep()
+
     except rospy.ROSInterruptException:
         rospy.logerr("Chatbos: ROS Node interrupted.")
+
+    
+
