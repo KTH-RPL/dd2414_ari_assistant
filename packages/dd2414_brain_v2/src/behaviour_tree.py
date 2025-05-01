@@ -8,6 +8,7 @@ import json
 import time
 from test_behaviour import TestBehaviour
 from greet_behaviour import GreetBehaviour
+from rospy.exceptions import ROSException
 import dd2414_brain_v2.msg as brain
 from dd2414_brain_v2.msg import BrainAction 
 
@@ -46,23 +47,29 @@ class Brain:
             #"goodbye"              :self.greet
         }
 
+
         self.behaviours = {}
         self.publishers_dict = {}
 
         for action in self.namespace_dict:
-            behaviour = py_trees_ros.actions.ActionClient(
-                name=action,
-                action_namespace=self.namespace_dict[action],
-                action_spec=brain.BrainAction,
-                action_goal=brain.BrainGoal())
-            self.behaviours[action] = behaviour
+            try:
+                
+                behaviour = py_trees_ros.actions.ActionClient(
+                    name=action,
+                    action_namespace=self.namespace_dict[action],
+                    action_spec=brain.BrainAction,
+                    action_goal=brain.BrainGoal())
+                self.behaviours[action] = behaviour
 
-            publisher = rospy.Publisher(f"/brain{self.namespace_dict[action]}", brain.BrainGoal, queue_size=1)
-            self.publishers_dict[action] = publisher
+                publisher = rospy.Publisher(f"/brain{self.namespace_dict[action]}", brain.BrainGoal, queue_size=1)
+                self.publishers_dict[action] = publisher
+            except ROSException as e:
+                rospy.logwarn(f"Could not connect to {self.namespace_dict[action]}")
+
 
         follow_user_behaviour = py_trees.Sequence(
             "Find speaker, then follow user", 
-            [self.behaviours["find speaker"], self.behaviours["follow user"]])        
+            [self.behaviours["find speaker"], self.behaviours["follow user"]])           
 
         # Actions in order of priority (higher priority are further up)
         self.action_dict = {
@@ -77,22 +84,7 @@ class Brain:
             #"speech"               :self.text_to_speech,
             #"greet"                :greet,
             #"goodbye"              :self.greet
-            }
-            
-
-        greetBehaviourTree = py_trees.Selector(
-            name="Greet behaviour",
-            children=[
-                py_trees.Sequence("Ari Looking at person?",
-                [
-                    #LookAtSpeakerBehaviour,
-                    TestBehaviour(name="test behaviour") #Look at speaker behaviour
-                ]),
-                GreetBehaviour("Greet behaviour")
-            ])
-        
-        greet_goal = brain.BrainGoal()
-        greet_goal.goal = "unknown"        
+            }      
 
         for action in self.action_dict:
             self.blackboard.set(action, False)
