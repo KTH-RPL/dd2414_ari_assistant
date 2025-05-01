@@ -6,7 +6,7 @@ from geometry_msgs.msg import Twist
 
 class JoyConversion:
     def __init__(self):
-        rospy.loginfo("Joy Conversion Initializing")
+        rospy.loginfo("[JOYSTICK       ]:Joy Conversion Initializing")
         self.joy_sub = rospy.Subscriber(rospy.get_param("~joy_out","/joy2"), Joy ,self.joy_cb)
         self.cmd_vel_pub = rospy.Publisher(rospy.get_param("~conversion_out","/cmd_vel2"),Twist,queue_size=10)
         
@@ -16,7 +16,8 @@ class JoyConversion:
 
         self.last_msg = Twist()
 
-        rospy.loginfo("Joy Conversion Finished Initializing")
+        rospy.loginfo("[JOYSTICK       ]:Initialized")
+        self.string_header = "[JOYSTICK       ]:"
 
     
     def joy_cb(self,Joy_data):
@@ -52,7 +53,7 @@ class JoyConversion:
 
 if __name__ == '__main__':
     try:
-        rospy.init_node("joy_convserion_node")
+        rospy.init_node("joy_convserion_node",log_level=rospy.INFO)
         node = JoyConversion()
         rate = rospy.Rate(10) #10Hz
         while not rospy.is_shutdown():

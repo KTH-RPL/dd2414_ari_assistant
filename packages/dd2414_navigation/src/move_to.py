@@ -15,6 +15,7 @@ import dd2414_brain_v2.msg as brain
 class MoveBase:
     def __init__(self):
         self.move_client = actionlib.SimpleActionClient('/move_base', MoveBaseAction)
+
         self.location_dict = {"desk" : (-0.85     , -0.65),
                               "table" :(-1.0    , -1.0),
                               "test" : (1.4029536753809344    , -0.5402147151304166),
@@ -22,6 +23,10 @@ class MoveBase:
         self.rate = rospy.Rate(10)
         self.move_base_status = 3
         self.current_goal = None
+
+        rospy.loginfo("[NAVIGATION     ]:Initialized")
+        self.string_header = "[NAVIGATION     ]:"
+
         
     def action(self,goal):
         result = brain.BrainResult()
@@ -74,18 +79,18 @@ class MoveBase:
             goal.target_pose.pose.orientation.z = quat[2]
             goal.target_pose.pose.orientation.w = quat[3]
 
-            rospy.loginfo("Sending goal")
+            rospy.loginfo("[NAVIGATION     ]:Sending goal")
             self.move_client.send_goal(goal)
             timeout = rospy.Duration(20)
-            #wait = self.move_client.wait_for_result(timeout)
 
 
         status = self.move_client.get_state()
         self.move_base_status = status
         result = self.move_client.get_result()
-        #rospy.loginfo(wait)
-        rospy.loginfo(f"Status: {status}")
-        rospy.loginfo(f"Result: {result}")
+
+        rospy.logdebug(f"{self.string_header} Status: {status}")
+        rospy.logdebug(f"{self.string_header} Result: {result}")
+
         if status == 3:
             self.current_goal = None
             return "Success"
@@ -96,6 +101,6 @@ class MoveBase:
             return "Failure"
 
 if __name__ == '__main__':
-    rospy.init_node('nav_move_base_server')
+    rospy.init_node('nav_move_base_server',log_level=rospy.INFO)
     server = StatusUpdate(rospy.get_name(),MoveBase)
     rospy.spin()
