@@ -49,14 +49,6 @@ class StatusUpdate(py_trees.behaviour.Behaviour):
             self._as.set_preempted()
             rospy.loginfo(self.string_header + "Goal Preempted.")
         else:
-<<<<<<< HEAD
-
-            if self._as.is_preempt_requested():
-                #If goal has been canceled perform necessary shutdown behavior
-                self.node.preempted()
-                ##################################################
-                self._as.set_preempted()
-                rospy.loginfo("Goal Preempted.")
 
             self._feedback.feedback = self._result.result
             self._feedback.in_dic = self._result.in_dic
@@ -64,27 +56,12 @@ class StatusUpdate(py_trees.behaviour.Behaviour):
             self._result = self.node.action(self.goal)
             self.rate.sleep()
                 
-=======
-            while self._result.result == "Working":
-                if self._as.is_preempt_requested():
-                    #If goal has been canceled perform necessary shutdown behavior
-                    self.node.preempted()
-                    ##################################################
-                    self._as.set_preempted()
-                    rospy.loginfo(self.string_header + "Goal Preempted.")
-
-                self._feedback.feedback = self._result.result
-                self._feedback.in_dic = self._result.in_dic
-                self._as.publish_feedback(self._feedback)
-                self._result = self.node.action(goal)
->>>>>>> development
             if self._result.result == "Success":
                 
                 rospy.loginfo(self.string_header + "Action Server " + self._action_name + " Succeded.")
                 self._as.set_succeeded(self._result)
             else:
                 self._result.result = "Failure"
-<<<<<<< HEAD
                 rospy.loginfo("Action Server " + self._action_name + " Aborted.")
                 self._as.set_aborted(self._result)
     
@@ -95,7 +72,5 @@ class StatusUpdate(py_trees.behaviour.Behaviour):
     def stop(self):
         self.node.preempted()
         self._as.set_preempted()
-=======
-                rospy.loginfo(self.string_header + "Action Server " + self._action_name + " Aborted.")
-                self._as.set_aborted(self._result)
->>>>>>> development
+        rospy.loginfo(self.string_header + "Action Server " + self._action_name + " Aborted.")
+        self._as.set_aborted(self._result)
