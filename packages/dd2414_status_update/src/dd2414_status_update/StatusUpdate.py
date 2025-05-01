@@ -60,9 +60,10 @@ class StatusUpdate(py_trees.behaviour.Behaviour):
                 
                 rospy.loginfo(self.string_header + "Action Server " + self._action_name + " Succeded.")
                 self._as.set_succeeded(self._result)
-            else:
-                self._result.result = "Failure"
+            elif self._result.result == "Failure":
                 rospy.loginfo("Action Server " + self._action_name + " Aborted.")
+                self._as.set_aborted(self._result)
+            else :
                 self._as.set_aborted(self._result)
     
     def input_cb(self, data):
