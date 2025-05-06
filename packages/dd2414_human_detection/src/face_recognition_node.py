@@ -15,8 +15,6 @@ import dd2414_brain_v2.msg as brain
 from geometry_msgs.msg import Point
 from pal_zoi_detector.srv import GetPointZoI, GetPointZoIRequest
 
-
-
 class FaceRecognitionNode:
     def __init__(self):
         self.bridge = CvBridge()
@@ -56,6 +54,11 @@ class FaceRecognitionNode:
         if goal.goal:
             self.target_name = goal.goal
 
+             # If face not yet seen or processed, keep working
+            if self.current_id is None:
+                result.result = "Working"
+                return result
+
             # Save name if its not unknown
             if self.target_name != "unknown":
                 rospy.loginfo(f"[FACERECOGNITION]:Save name: {self.target_name}")
@@ -64,7 +67,6 @@ class FaceRecognitionNode:
                 # Return name that was saved
                 result.in_dic = json.dumps({"name" : self.target_name})
 
-            
             else:
                 rospy.logdebug(f"[FACERECOGNITION]:Name unknown. Searching if we already know it.")
                 name = self.search_for_name()
@@ -77,11 +79,14 @@ class FaceRecognitionNode:
 
             result.result = "Success"
             rospy.logdebug(result)
-            return result
-
+        else:
+            rospy.logwarn("[FACERECOGNITION]:No goal provided.")
+            result.result = "Failure"
+        
+        return result
 
     def preempted(self):
-        #Procedure in case the call gets cancelled
+        # Procedure in case the call gets cancelled
         pass
 
     def load_known_faces(self):
@@ -272,7 +277,7 @@ class FaceRecognitionNode:
 
                 # Save the room that corresponds to that location
                 room = self.get_zoi_for_point(x, y, z)
-
+                
                 self.known_faces["room"][index] = room
 
                 self.save_known_faces()
@@ -307,8 +312,12 @@ class FaceRecognitionNode:
         Calls the /get_zoi service, passing a point (x, y, z),
         and returns the resulting Zone of Interest (ZoI).
         """
-        # Wait for the service to be available
-        rospy.wait_for_service('/get_zoi')
+        # Wait for the service to be available (with timeout)
+        try:
+            rospy.wait_for_service('/get_zoi', timeout=0.5)  # Wait half a second
+        except rospy.ROSException as e:
+            rospy.logerr(f"[FACERECOGNITION]:Timeout waiting for service /get_zoi: {e}")
+            return None
 
         try:
             # Create a service proxy for the GetPointZoI service
