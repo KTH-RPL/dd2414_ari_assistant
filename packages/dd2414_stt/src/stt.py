@@ -43,7 +43,7 @@ class STT:
             self.msg_data = None
             return
         
-        else:
+        elif msg.data != None:
             self.msg_data = msg.data
             self.process_audio(self.msg_data)
 
