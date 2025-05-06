@@ -7,7 +7,6 @@ import whisper
 
 from googletrans import Translator
 from std_msgs.msg import String
-from deep_translator import GoogleTranslator
 from audio_common_msgs.msg import AudioData
 
 class STT:
