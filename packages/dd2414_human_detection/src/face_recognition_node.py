@@ -14,6 +14,7 @@ from dd2414_status_update import StatusUpdate
 import dd2414_brain_v2.msg as brain
 from geometry_msgs.msg import Point
 from pal_zoi_detector.srv import GetPointZoI, GetPointZoIRequest
+import time
 
 class FaceRecognitionNode:
     def __init__(self):
@@ -44,19 +45,25 @@ class FaceRecognitionNode:
         rospy.loginfo("[FACERECOGNITION]:Initialized")
         self.string_header = "[FACERECOGNITION]:"
 
+        self.working_count = 0
+        
+
     def action(self,goal):
         """
         This function will execute when it receives a goal from the brain. It will contain a string (goal.goal)
         which indicates the name of the person we are currently seeing. 
         """
         result = brain.BrainResult()
+        current_time = time.time()
 
         if goal.goal:
             self.target_name = goal.goal
+            self.working_count = 0
 
-             # If face not yet seen or processed, keep working
+            # If face not yet seen FAILURE, can not save name or search for name
             if self.current_id is None:
-                result.result = "Working"
+                rospy.logwarn("[FACERECOGNITION]:No face detected to save.")
+                result.result = "Failed"
                 return result
 
             # Save name if its not unknown
