@@ -172,8 +172,7 @@ class FaceRecognitionNode:
             if len(self.face_encoding_buffer[face_id]) >= self.required_encodings:
                 if self.is_stable_encoding(face_id):
                     match_id = self.find_matching_face(encoding)
-                
-                                
+                  
                 if match_id:
                     rospy.logdebug(f"[FACERECOGNITION]:Recognized face {face_id} as {match_id}")
                     self.current_id = match_id
@@ -183,7 +182,7 @@ class FaceRecognitionNode:
                     rospy.loginfo(f"[FACERECOGNITION]:Saved new face {face_id} as {new_id} (Name: {name}).")
                     self.current_id = new_id
                 
-                # Save latest known location if you know the name
+                # Save latest known location
                 self.add_location_to_face(face_id)
                 del self.face_encoding_buffer[face_id]  
 
