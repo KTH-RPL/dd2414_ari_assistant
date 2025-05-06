@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 
+import operator
 import rospy
 from std_msgs.msg import String
 from std_msgs.msg import Bool
@@ -88,6 +89,9 @@ class Brain:
 
         for action in self.action_dict:
             self.blackboard.set(action, False)
+            self.blackboard.set(f"failcounter {action}", 0)
+
+            
 
         # Set up behaviours and construct tree
         root = py_trees.composites.Parallel(policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ALL)
@@ -100,8 +104,12 @@ class Brain:
                 variable_name=action,
                 expected_value=False,
             )
-            # Create behaviour to be executed if action is requested
-            behaviour = self.action_dict[action]
+
+            reset_fail_counter = py_trees.blackboard.SetBlackboardVariable(
+                name="Set fail counter back to 0",
+                variable_name=f"failcounter {action}",
+                variable_value=0
+            )
 
             set_action_requested_to_false = py_trees.blackboard.SetBlackboardVariable(
                 name="Set Action requested back to false",
@@ -109,17 +117,48 @@ class Brain:
                 variable_value=False
             )
 
+            check_fail_counter = py_trees.blackboard.CheckBlackboardVariable(
+                    name=f"{action} failcounter more than 10?",
+                    variable_name=f"failcounter {action}",
+                    expected_value=10,
+                    comparison_operator=operator.ge,
+                    debug_feedback_message=True
+                )
+
+            counter_check = py_trees.composites.Sequence(
+                f"Check fail counter",
+                [
+                check_fail_counter,
+                set_action_requested_to_false,
+                reset_fail_counter
+                ]
+            )
+            # Create behaviour to be executed if action is requested
+            behaviour = self.action_dict[action]
+
+            incrementor = py_trees.behaviours.Failure(name="IncrementCounter")
+            incrementor.update = (lambda a=action: self.increment_fail_counter(a) or py_trees.common.Status.FAILURE)
+
+
             # Add condition and behaviour to tree
             root.add_children([
                 py_trees.composites.Selector(
                     f"Execute {action} action if requested", 
                     [
-                        condition, 
+                        condition,
+                        counter_check,
                         py_trees.composites.Sequence(
                             f"Execute {action} action and set action requested to false", 
                             [
+                            py_trees.composites.Selector(
+                                f"Execute {action} action or increase counter",
+                                [behaviour,
+                                 incrementor]
+
+                            ),
                             behaviour, 
-                            set_action_requested_to_false
+                            set_action_requested_to_false,
+                            reset_fail_counter
                             ]),
                     ]),
                 ])
@@ -133,6 +172,12 @@ class Brain:
     def print_tree(self, tree: py_trees.trees.BehaviourTree) -> None:
         # Print the behaviour tree and its current status.
         print(py_trees.display.print_ascii_tree(root=tree.root, show_status=True))
+
+    def increment_fail_counter(self, action):
+
+        current = self.blackboard.get(f"failcounter {action}")
+        print("INCREASING COUTNER, current ", f"failcounter  {action}", current)
+        self.blackboard.set(f"failcounter {action}", current + 1)
 
     def intent_cb(self,string_msg):
 

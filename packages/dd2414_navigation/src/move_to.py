@@ -34,15 +34,12 @@ class MoveBase:
         if goal.goal and goal.goal in self.location_dict:
 
             if(self.current_goal != goal.goal and self.current_goal is not None):
-                self.result = "Failure"
+                result = "Failure"
                 self.preempted()
                 
             else:
                 position = self.location_dict[goal.goal]
                 result.result = self.nav_move_base(position[0],position[1])
-
-                if(self.current_goal != goal.goal and self.current_goal is not None):
-                    self.result = "Failure"
 
             self.current_goal = goal.goal
         else:
