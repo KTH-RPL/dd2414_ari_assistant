@@ -41,8 +41,7 @@ class MoveBase:
                 position = self.location_dict[goal.goal]
                 result.result = self.nav_move_base(position[0],position[1])
 
-                if(self.current_goal != goal.goal and self.current_goal is not None):
-                    result.result = "Failure"
+
 
             self.current_goal = goal.goal
         else:
@@ -81,7 +80,6 @@ class MoveBase:
 
             rospy.loginfo("[NAVIGATION     ]:Sending goal")
             self.move_client.send_goal(goal)
-            timeout = rospy.Duration(20)
 
 
         status = self.move_client.get_state()
