@@ -78,7 +78,7 @@ class ChatboxARI:
 
         # Subscribers
         #rospy.Subscriber("/humans/voices/anonymous_speaker/speech",LiveSpeech,self.asr_result)
-        rospy.Subscriber("/audio/speech", AudioData, self.stt, queue_size=1,)
+        rospy.Subscriber("/audio/speech", AudioData, self.stt, queue_size=1)
         rospy.Subscriber("/tts/ARI_speeking",String,self.ari_speeking_state)
 
         # Action client of TTS Multilanguages
@@ -92,6 +92,7 @@ class ChatboxARI:
         rospy.loginfo("[LLM            ]:Initialized")
         self.tts_output("Ready to operate")
 
+        sys.setdefaultencoding('utf-8')
         rospy.sleep(3) 
         self.listen   = True
 

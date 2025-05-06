@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import sys
 import json
 import rospy
 import subprocess
@@ -33,6 +34,7 @@ class OllamaResponse:
         self.mp3_path = os.path.expanduser('/tmp/tts_audio.mp3')
         self.wav_path = os.path.expanduser('/tmp/tts_audio_wav.wav')
         
+        sys.setdefaultencoding('utf-8')
         rospy.loginfo("[Ollama Response]:Initialized")
         self.string_header = "[Ollama Response]:"
 
@@ -48,7 +50,7 @@ class OllamaResponse:
         intent    = dictonary["intent"]
         phrase    = dictonary["phrase"]
         
-        return self.generate_response(goal.goal,language,intent)
+        return self.generate_response(goal.goal,language,intent,phrase)
 
     def preempted(self):
         pass
@@ -67,21 +69,24 @@ class OllamaResponse:
         command = ["sshpass", "-p", "pal", "scp", self.wav_path, "pal@192.168.128.28:/tmp/"]
         subprocess.run(command)
 
-    def generate_response(self,user_input,language,intent):
+    def generate_response(self,user_input,language,intent,phrase):
         name_promt = ""
         if intent in ["greet","goodbye"] and self.brain_person_name != "unknown":
-            name_promt = "My name is: " + self.brain_person_name + ". Include it in your response."
+            name_promt = "My name is: " + self.brain_person_name + ". Include it in the response."
 
-        completion = self.api.chat(
-            model=self.model_ollama, 
-            messages=[
-            {"role":"system","content": self.system_promt + name_promt +f" Respond in:{language}"},
-            {"role":"user","content": user_input},
-            ]
-        )
+            completion = self.api.chat(
+                model=self.model_ollama, 
+                messages=[
+                {"role":"system","content": self.system_promt + name_promt +f" Respond in:{language}"},
+                {"role":"user","content": user_input},
+                ]
+            )
 
-        response = completion.message.content
-        rospy.loginfo(f"[Response Ollama]:User said: {response}")
+            response = completion.message.content
+            rospy.loginfo(f"[Response Ollama]:User said: {response}")
+        
+        else:
+            response = phrase
 
         if language != "en":
             self.tts_multilanguage_output(response,language)

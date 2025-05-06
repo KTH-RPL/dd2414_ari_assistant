@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
+import sys
 import wave
 import json
 import rospy
 import whisper
 
+from googletrans import Translator
 from std_msgs.msg import String
 from deep_translator import GoogleTranslator
 from audio_common_msgs.msg import AudioData
@@ -13,10 +15,11 @@ class STT:
         self.rate          = rospy.Rate(1)
         self.string_header = "[STT            ]:"
         self.languages     = ["en","es","de","fr","sv"]
-        self.stt_model     = whisper.load_model("turbo")
+        self.stt_model     = whisper.load_model("small")
         self.verbose       = rospy.get_param("/verbose",False)
         self.transcript    = {}
         self.msg_data      = ""
+        self.translator    = Translator()
 
         # Audio parameters – adjust according to your setup
         #self.stt_listen   = False
@@ -33,6 +36,7 @@ class STT:
         # Subscribers
         rospy.Subscriber("/audio/speech", AudioData, self.stt_audio, queue_size=1)
         
+        sys.setdefaultencoding('utf-8')
         rospy.sleep(3) 
         rospy.loginfo("[STT            ]:Initialized")
 
@@ -59,7 +63,8 @@ class STT:
         stt_language = result["language"]
 
         if stt_language != "en":
-            result_translated = GoogleTranslator(source=stt_language, target='en').translate(stt_result)
+            #result_translated = GoogleTranslator(source=stt_language, target='en').translate(stt_result)
+            result_translated = self.translator.translate(stt_result, src=stt_language, dest="en")
         else:
             result_translated = stt_result
 
