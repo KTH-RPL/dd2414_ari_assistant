@@ -155,8 +155,7 @@ class Brain:
                                 [behaviour,
                                  incrementor]
 
-                            ),
-                            behaviour, 
+                            ), 
                             set_action_requested_to_false,
                             reset_fail_counter
                             ]),
@@ -174,9 +173,7 @@ class Brain:
         print(py_trees.display.print_ascii_tree(root=tree.root, show_status=True))
 
     def increment_fail_counter(self, action):
-
         current = self.blackboard.get(f"failcounter {action}")
-        print("INCREASING COUTNER, current ", f"failcounter  {action}", current)
         self.blackboard.set(f"failcounter {action}", current + 1)
 
     def intent_cb(self,string_msg):
