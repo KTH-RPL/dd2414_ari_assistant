@@ -54,11 +54,9 @@ class FaceRecognitionNode:
         which indicates the name of the person we are currently seeing. 
         """
         result = brain.BrainResult()
-        current_time = time.time()
 
         if goal.goal:
             self.target_name = goal.goal
-            self.working_count = 0
 
             # If face not yet seen FAILURE, can not save name or search for name
             if self.current_id is None:
