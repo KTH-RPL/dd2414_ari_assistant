@@ -81,6 +81,7 @@ class FaceRecognitionNode:
                     result.in_dic = json.dumps({"name" : name })
                 else:
                     result.in_dic = json.dumps({"name" : "unknown" })
+                rospy.loginfo(f"[FACERECOGNITION]:Name: "+ str(name))
 
             result.result = "Success"
             rospy.logdebug(result)
@@ -134,12 +135,17 @@ class FaceRecognitionNode:
         
     def face_id_callback(self, msg):
         """Subscribe to detected face IDs and listen to their aligned image topics."""
-        #if self.enable:
+        if not msg.ids:
+            self.current_id = None
+            return
+        
         for face_id in msg.ids:
             if face_id not in self.face_images_subs:
                 # Subscribe to the aligned face image instead of landmarks
                 aligned_topic = f"/humans/faces/{face_id}/aligned"
                 self.face_images_subs[face_id] = rospy.Subscriber(aligned_topic, Image, self.face_image_callback, callback_args=face_id)
+
+        
 
 
 
@@ -337,7 +343,7 @@ class FaceRecognitionNode:
             # Access the first zone of interest (zois is a list)
             if response.zois.zois:
                 zone_of_interest = response.zois.zois[0]  # Get the first ZoI string
-                rospy.loginfo(f"Zone of Interest: {zone_of_interest}")
+                rospy.logdebug(f"Zone of Interest: {zone_of_interest}")
                 return zone_of_interest
             else:
                 rospy.logwarn("No zones of interest returned.")
