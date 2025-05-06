@@ -27,24 +27,14 @@ class ChatboxARI:
         self.rate              = rospy.Rate(1)
         self.listen            = False
         self.ready_to_process  = True
-        self.data              = None
+        self.data_dic          = None
         self.string_header     = "[LLM            ]:"
         self.languages         = ["en","es","de","fr","sv"]
         self.ari_speeking      = ""
         self.model_ollama      = "mistral:latest"
-        self.stt_model         = whisper.load_model("small")
         self.verbose           = rospy.get_param("/verbose",False)
-
-        # Audio parameters – adjust according to your setup
-        #self.stt_listen   = False
-        self.stt_filename = f"/tmp/ARI_stt.wav"
-        self.SAMPLE_RATE  = 16000  # Hz
-        self.SAMPLE_WIDTH = 2      # 2 bytes = 16-bit audio
-        self.CHANNELS     = 1      # Mono
-        self.stt_result   = ""
-        self.stt_language = "en"
-        self.mp3_path     = os.path.expanduser('/tmp/tts_audio.mp3')
-        self.wav_path     = os.path.expanduser('/tmp/tts_audio_wav.wav')
+        self.stt_result        = ""
+        self.stt_language      = "en"
 
         self.intents = {         #Action/Split
             "greet"              :[False,False],
@@ -78,13 +68,8 @@ class ChatboxARI:
 
         # Subscribers
         #rospy.Subscriber("/humans/voices/anonymous_speaker/speech",LiveSpeech,self.asr_result)
-        rospy.Subscriber("/audio/speech", AudioData, self.stt, queue_size=1)
         rospy.Subscriber("/tts/ARI_speeking",String,self.ari_speeking_state)
-
-        # Action client of TTS Multilanguages
-        self.ac_ttsm = SimpleActionClient('text_multilanguage_speech', tts.TextToSpeechMultilanguageAction)
-        self.ac_ttsm.wait_for_server()
-        rospy.loginfo("[LLM            ]:MULTILANGUAGE UP")
+        rospy.Subscriber("/stt/transcript",String,self.stt)
 
         self.setup_tts()
         self.calibrate_api()
@@ -165,13 +150,15 @@ class ChatboxARI:
         return "No match found"
     
     
-    def publish_intent(self, intent, parameter,response):
+    def publish_intent(self, intent, parameter, response):
         intent_data = {"intent":intent,"input":parameter,"phrase":response,"language":self.stt_language}
         self.dictonary_pub.publish(json.dumps(intent_data))
         rospy.loginfo(f"[LLM            ]:Published intent:{intent}, Input:{parameter}, Phrase:{response}, Lang:{self.stt_language}")
 
     def stt(self,msg):
-        self.data = msg.data
+        self.data_dic = msg.data
+        self.data_dic = json.loads(self.data_dic)
+
         if self.listen:
             self.ready_to_process = True
         else:
@@ -179,22 +166,13 @@ class ChatboxARI:
             return
         
     def run_stt(self):
-        if not self.data or self.ari_speeking == "speeking":
+        if self.data == None or self.ari_speeking == "speeking":
             return
         
         self.listen= False
-        # Open WAV file for writing
-        with wave.open(self.stt_filename, 'w') as wf:
-            wf.setnchannels(self.CHANNELS)
-            wf.setsampwidth(self.SAMPLE_WIDTH)
-            wf.setframerate(self.SAMPLE_RATE)
-            wf.writeframes(self.data)  # msg.data is a bytes object
-            wf.close
-        #rospy.loginfo(f"Saved audio to {self.stt_filename}")
-
-        result            = self.stt_model.transcribe(self.stt_filename)
-        self.stt_result   = result["text"]
-        self.stt_language = result["language"]
+        
+        self.stt_result   = self.data_dic["translation"]
+        self.stt_language = self.data_dic["language"]
 
         if "stop" in (self.stt_result).lower():
             self.listen = False
@@ -202,7 +180,7 @@ class ChatboxARI:
             self.tts_output("Stopping")
             self.publish_intent("stop","","Stopping")
 
-        if "start" in (self.stt_result).lower()  or "init" in (self.stt_result).lower():
+        elif "start" in (self.stt_result).lower()  or "init" in (self.stt_result).lower():
             self.tts_output("Listening")
             self.listen = True
             self.ready_to_process = False
@@ -215,13 +193,13 @@ class ChatboxARI:
         if self.ready_to_process:
             rospy.loginfo(f"[LLM            ]:User said: {self.stt_result}, {self.stt_language}")
             self.process_user_input(self.stt_result)
-            self.listen      = True
+            self.listen           = True
             self.ready_to_process = False
         
         self.data = None
             
 
-    def process_intent(self, intent_ollama, intent_result, user_input, user_input_translated):
+    def process_intent(self, intent_ollama, intent_result, user_input):
         parameter = "unknown"
         response  = ""
 
@@ -238,9 +216,9 @@ class ChatboxARI:
 
         if not self.intents[intent_result][0]:
             if intent_result == "provide information" or intent_result == "remember user":
-                response = self.ask_ollama(f"{user_input_translated}. Response in 15 words")
+                response = self.ask_ollama(f"{user_input}. Response in 15 words")
                 if self.stt_language != 'en':
-                    response = GoogleTranslator(source='en', target=self.stt_language).translate(user_input)
+                    response = GoogleTranslator(source='en', target=self.stt_language).translate(response)
             else:
                 response = user_input
 
@@ -249,12 +227,8 @@ class ChatboxARI:
 
     def process_user_input(self, user_input):
         
-        if self.stt_language != "en":
-            user_input_translated = GoogleTranslator(source=self.stt_language, target='en').translate(user_input)
-        else:
-            user_input_translated = user_input
-        rospy.loginfo("[LLM            ]:User said: "+str(user_input_translated))
-        query         = self.build_intent_query(user_input_translated)
+        rospy.loginfo("[LLM            ]:User said: "+str(user_input))
+        query         = self.build_intent_query(user_input)
         intent_ollama = self.ask_ollama(query)
     
         rospy.logdebug(self.string_header + intent_ollama)
@@ -266,7 +240,7 @@ class ChatboxARI:
 
         else:
 
-            parameter, response = self.process_intent(intent_ollama, intent_result, user_input,user_input_translated)
+            parameter, response = self.process_intent(intent_ollama, intent_result, user_input)
             if parameter == "" and response == "":
                 self.reject_message()
                 return 
@@ -274,7 +248,7 @@ class ChatboxARI:
             rospy.loginfo(f"[LLM            ]:Ollama response: {response}")
             rospy.loginfo(f"STT language: {self.stt_language}")
             
-            self.publish_intent(intent_result, parameter,response)
+            self.publish_intent(intent_result,parameter,response)
 
         return
     

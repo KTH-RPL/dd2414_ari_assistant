@@ -18,9 +18,8 @@ class OllamaResponse:
     def __init__(self):
         self.ip_ollama    = Client(host="http://130.229.175.162:11434")
         self.model_ollama = "mistral:latest"
-        self.languages    = ["en:English","es:Spanish","de:German","fr:French","sv:Swedish"]
-        self.system_promt = "You are an office assistant robot called ARI. Be concise and helpful. " \
-        "These are the languages with their corresponding abreviation: " + ' '.join(self.languages) + ""
+        self.languages    = {"en":"English","es":"Spanish","de":"German","fr":"French","sv":"Swedish"}
+        self.system_promt = "You are an office assistant robot called ARI. Be concise and helpful. "
         self.result       = brain.BrainResult()
         self.tts_goal     = tts.TextToSpeechMultilanguageGoal()
 
@@ -28,6 +27,7 @@ class OllamaResponse:
 
         rospy.Subscriber("/brain/user_name",String,self.update_brain_person)
 
+        # Action client of TTS Multilanguages
         self.ac_ttsm = SimpleActionClient('text_multilanguage_speech', tts.TextToSpeechMultilanguageAction)
         self.ac_ttsm.wait_for_server()
 
@@ -50,7 +50,7 @@ class OllamaResponse:
         intent    = dictonary["intent"]
         phrase    = dictonary["phrase"]
         
-        return self.generate_response(goal.goal,language,intent,phrase)
+        return self.generate_response(phrase,intent,language)
 
     def preempted(self):
         pass
@@ -69,7 +69,7 @@ class OllamaResponse:
         command = ["sshpass", "-p", "pal", "scp", self.wav_path, "pal@192.168.128.28:/tmp/"]
         subprocess.run(command)
 
-    def generate_response(self,user_input,language,intent,phrase):
+    def generate_response(self,phrase,intent,language):
         name_promt = ""
         if intent in ["greet","goodbye"] and self.brain_person_name != "unknown":
             name_promt = "My name is: " + self.brain_person_name + ". Include it in the response."
@@ -77,13 +77,13 @@ class OllamaResponse:
             completion = self.api.chat(
                 model=self.model_ollama, 
                 messages=[
-                {"role":"system","content": self.system_promt + name_promt +f" Respond in:{language}"},
-                {"role":"user","content": user_input},
+                {"role":"system","content": self.system_promt + name_promt +f" Respond in:{str(self.languages[language])}"},
+                {"role":"user","content": phrase},
                 ]
             )
 
             response = completion.message.content
-            rospy.loginfo(f"[Response Ollama]:User said: {response}")
+            rospy.loginfo(f"[Response Ollama]:Response : {response}")
         
         else:
             response = phrase
