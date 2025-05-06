@@ -60,7 +60,7 @@ class ChatboxARI:
             "translate: The robot has to help the user to translate sentences or a conversation", 
             "other: If any of the other actions does not fit, the robot has to classify it as other"]
         
-        self.api          = Client(host="http://130.229.175.162:11434")
+        self.api          = Client(host="http://130.229.183.186:11434")
         self.system_promt = "You are an office assistant robot caled Ari. Be concise and helpful."
 
         # Publishers
@@ -77,7 +77,6 @@ class ChatboxARI:
         rospy.loginfo("[LLM            ]:Initialized")
         self.tts_output("Ready to operate")
 
-        sys.setdefaultencoding('utf-8')
         rospy.sleep(3) 
         self.listen   = True
 

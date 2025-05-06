@@ -36,7 +36,6 @@ class STT:
         # Subscribers
         rospy.Subscriber("/audio/speech", AudioData, self.stt_audio, queue_size=1)
         
-        sys.setdefaultencoding('utf-8')
         rospy.sleep(3) 
         rospy.loginfo("[STT            ]:Initialized")
 
