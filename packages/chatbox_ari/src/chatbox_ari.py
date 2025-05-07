@@ -1,25 +1,15 @@
 #!/usr/bin/env python3
 import re
-import os
-import sys
 import json
-import wave
-import torch
 import rospy
 import whisper
-import paramiko
-import subprocess
 import dd2414_text_speech.msg as tts
 
-from io import BytesIO
-from gtts import gTTS
 from pydub import AudioSegment
 from ollama import Client
 from actionlib import SimpleActionClient
 from std_msgs.msg import String
-from hri_msgs.msg import LiveSpeech
 from deep_translator import GoogleTranslator
-from audio_common_msgs.msg import AudioData
 from pal_interaction_msgs.msg import TtsAction, TtsGoal
 
 class ChatboxARI:
@@ -60,7 +50,8 @@ class ChatboxARI:
             "translate: The robot has to help the user to translate sentences or a conversation", 
             "other: If any of the other actions does not fit, the robot has to classify it as other"]
         
-        self.api          = Client(host="http://130.229.183.186:11434")
+        #self.api          = Client(host="http://130.229.183.186:11434")
+        self.api          = Client(host="http://localhost:11434")
         self.system_promt = "You are an office assistant robot caled Ari. Be concise and helpful."
 
         # Publishers
@@ -161,13 +152,13 @@ class ChatboxARI:
         if self.listen:
             self.ready_to_process = True
         else:
-            self.data = None
+            self.data_dic = None
             return
         
     def run_stt(self):
-        if self.data == None or self.ari_speeking == "speeking":
+        if self.data_dic == None or self.ari_speeking == "speeking":
             return
-        
+        rospy.loginfo(self.data_dic)
         self.listen= False
         
         self.stt_result   = self.data_dic["translation"]
@@ -195,7 +186,7 @@ class ChatboxARI:
             self.listen           = True
             self.ready_to_process = False
         
-        self.data = None
+        self.data_dic = None
             
 
     def process_intent(self, intent_ollama, intent_result, user_input):
@@ -203,7 +194,7 @@ class ChatboxARI:
         response  = ""
 
         if self.intents[intent_result][0] and intent_result != "remember user":
-            response = f"Initializing '{intent_result}' action."
+            response = f"Initializing {intent_result} action."
         
         if self.intents[intent_result][1] and ":" in intent_ollama:
             parameter = intent_ollama.split(":")[-1].strip().lower().replace("the ","").replace("\"","").replace(".","")
@@ -225,8 +216,6 @@ class ChatboxARI:
         return parameter, response
 
     def process_user_input(self, user_input):
-        
-        rospy.loginfo("[LLM            ]:User said: "+str(user_input))
         query         = self.build_intent_query(user_input)
         intent_ollama = self.ask_ollama(query)
     

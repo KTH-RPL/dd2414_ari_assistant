@@ -16,7 +16,7 @@ from dd2414_status_update import StatusUpdate
 
 class OllamaResponse:
     def __init__(self):
-        self.ip_ollama    = Client(host="http://130.229.183.186:11434")
+        self.ip_ollama    = Client(host="http://localhost:11434")#Client(host="http://130.229.183.186:11434")
         self.model_ollama = "mistral:latest"
         self.languages    = {"en":"English","es":"Spanish","de":"German","fr":"French","sv":"Swedish"}
         self.system_promt = "You are an office assistant robot called ARI. Be concise and helpful. "
@@ -98,8 +98,8 @@ class OllamaResponse:
         self.tts_goal.lang = language
 
         # Send audio goal
-        self.ac_ttsm.send_goal(self.tts_goal)
         rospy.loginfo("[Ollama Response]:Response sent to TTS")
+        self.ac_ttsm.send_goal_and_wait(self.tts_goal)
 
         self.result.result = "Success"
 
