@@ -44,7 +44,7 @@ class StatusUpdate(py_trees.behaviour.Behaviour):
         self._result.result = "Working" #Variable to store the status
         self.previous_goal = self.goal
 
-        while(self._result.result == "Working"):
+        while(self._result.result == "Working" and not rospy.is_shutdown()):
             
             #If a new goal has been sent, preempt to cancel current goal
             if(self.previous_goal != self.goal):
