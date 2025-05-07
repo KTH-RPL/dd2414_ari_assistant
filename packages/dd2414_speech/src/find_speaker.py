@@ -86,9 +86,7 @@ class FindSpeakerActionServer:
 
         self.move_base_client.send_goal(goal)
         self.turning_goal = goal
-        print("sending goal to move_base client")
         self.move_base_client.wait_for_result()
-        print("goal completed")
 
         self.turning_to_speech = False
 
