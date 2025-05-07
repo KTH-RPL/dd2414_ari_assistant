@@ -20,7 +20,6 @@ class MoveToPOI:
         self._sub_map_poi = rospy.Subscriber('/poi_marker_server/update_full',InteractiveMarkerInit, self.map_poi_conversion)
         self.encodings_file = "/home/pal/deployed_ws/lib/dd2414_human_detection/face_database.json"
 
-        self.current_goal = None
         self.status = 3
     
     def load_known_faces(self):
@@ -56,40 +55,33 @@ class MoveToPOI:
             rospy.logdebug(self.string_header + str(result))
 
             if status == 3:
-                self.current_goal = None
                 return "Success"
             elif status == 0 or status == 1:
                 return "Working"
             else:
-                self.current_goal = None
                 return "Failure"
 
     def action(self,goal):
         result = brain.BrainResult()
-        #If the goal has been changed
-        if self.current_goal != goal.goal and self.current_goal is not None :
-            result.result = "Failure"
-            self.preempted()
 
-        else: #If the goal is the same or its a new goal
-            #Check if the goal is a POI
-            if goal.goal in self.poi_dict:
-                result.result=self.go_to_poi(goal.goal)
-            #If the goal is not a POI but a Person
+        #If the goal is the same or its a new goal
+        #Check if the goal is a POI
+        if goal.goal in self.poi_dict:
+            result.result=self.go_to_poi(goal.goal)
+        #If the goal is not a POI but a Person
+        else:
+            room = self.get_poi_from_person(goal.goal)
+
+            #If there is a registered room to the person
+            if room is not None and room != "" :
+                result.result= self.go_to_poi(room)
             else:
-                room = self.get_poi_from_person(goal.goal)
-
-                #If there is a registered room to the person
-                if room is not None and room != "" :
-                    result.result= self.go_to_poi(room)
+                if room == "":
+                    rospy.loginfo(self.string_header + "Person is not registered to any room: " + goal.goal)
                 else:
-                    if room == "":
-                        rospy.loginfo(self.string_header + "Person is not registered to any room: " + goal.goal)
-                    else:
-                        rospy.loginfo(self.string_header + "Waypoint not found: " + goal.goal)
-                    result.result = "Failure"
+                    rospy.loginfo(self.string_header + "Waypoint not found: " + goal.goal)
+                result.result = "Failure"
 
-        self.current_goal = goal.goal
 
         return result
     
