@@ -60,19 +60,22 @@ class STT:
         stt_result   = result["text"]
         stt_language = result["language"]
 
-        if stt_language != "en":
-            #result_translated = GoogleTranslator(source=stt_language, target='en').translate(stt_result)
-            result_translated = self.translator.translate(stt_result, src=stt_language, dest="en")
-            result_translated = result_translated.text
-        else:
-            result_translated = stt_result
+        try:
+            if stt_language != "en":
+                #result_translated = GoogleTranslator(source=stt_language, target='en').translate(stt_result)
+                result_translated = self.translator.translate(stt_result, src=stt_language, dest="en")
+                result_translated = result_translated.text
+            else:
+                result_translated = stt_result
 
-        self.transcript["text"]        = str(stt_result)
-        self.transcript["translation"] = str(result_translated)
-        self.transcript["language"]    = str(stt_language)
+            self.transcript["text"]        = str(stt_result)
+            self.transcript["translation"] = str(result_translated)
+            self.transcript["language"]    = str(stt_language)
 
-        self.stt_pub.publish(json.dumps(self.transcript))
-        rospy.loginfo(f"[STT            ]:Text:{stt_result}, Translation:{result_translated}, Language:{stt_language}")
+            self.stt_pub.publish(json.dumps(self.transcript))
+            rospy.loginfo(f"[STT            ]:Text:{stt_result}, Translation:{result_translated}, Language:{stt_language}")
+        except:
+            rospy.logwarn("No Audio Detected")
 
 if __name__ == '__main__':
     try:
