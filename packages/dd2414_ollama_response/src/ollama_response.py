@@ -43,12 +43,19 @@ class OllamaResponse:
             self.brain_person_name = msg.data
 
     def action(self,goal):
-        dictonary = json.loads(goal.in_dic)
-        language  = dictonary["language"]
-        intent    = dictonary["intent"]
-        phrase    = dictonary["phrase"]
+        try:
+            dictonary = json.loads(goal.in_dic)
+            language  = dictonary["language"]
+            intent    = dictonary["intent"]
+            phrase    = dictonary["phrase"]
         
-        return self.generate_response(phrase,intent,language)
+            return self.generate_response(phrase,intent,language)
+        
+        except Exception as e:
+            rospy.logerr(f"Empty Goal: {e}")
+            self.result.result = "Failure"
+            
+            return self.result
 
     def preempted(self):
         pass
