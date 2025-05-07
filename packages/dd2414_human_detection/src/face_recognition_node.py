@@ -61,7 +61,7 @@ class FaceRecognitionNode:
             # If face not yet seen FAILURE, can not save name or search for name
             if self.current_id is None:
                 rospy.logwarn("[FACERECOGNITION]:No face detected to save.")
-                result.result = "Failed"
+                result.result = "Failure"
                 return result
 
             # Save name if its not unknown
