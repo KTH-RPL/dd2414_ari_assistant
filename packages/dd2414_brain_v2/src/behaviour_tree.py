@@ -8,7 +8,7 @@ from std_msgs.msg import Bool
 import json
 import time
 from test_behaviour import TestBehaviour
-from greet_behaviour import GreetBehaviour
+#from greet_behaviour import GreetBehaviour
 from rospy.exceptions import ROSException
 import dd2414_brain_v2.msg as brain
 from dd2414_brain_v2.msg import BrainAction 
@@ -38,8 +38,8 @@ class Brain:
             "test"                 :"/test",
             #"stop"                 :self.stop,
             #"remember user"        :self.name_assign,
-            "go to"                :"/nav_move_base_server",
-            "find speaker"         :"/ari_turn_to_speaker",
+            #"go to"                :"/nav_move_base_server",
+            "find speaker"         :"/find_speaker",
             "follow user"          :"/follow_user",
             #"translate"            :self.translate,
             #"provide information"  :self.provide_information,
@@ -70,14 +70,15 @@ class Brain:
 
         follow_user_behaviour = py_trees.Sequence(
             "Find speaker, then follow user", 
-            [self.behaviours["find speaker"], self.behaviours["follow user"]])           
+            #[self.behaviours["find speaker"], self.behaviours["follow user"]])
+            [self.behaviours["follow user"]])           
 
         # Actions in order of priority (higher priority are further up)
         self.action_dict = {
             "test"                 :TestBehaviour(name="test behaviour"),
             #"stop"                 :self.stop,
             #"remember user"        :self.name_assign,
-            "go to"                :self.behaviours['go to'],
+            #"go to"                :self.behaviours['go to'],
             "find speaker"         :self.behaviours['find speaker'],
             "follow user"          :follow_user_behaviour,
             #"translate"            :self.translate,
