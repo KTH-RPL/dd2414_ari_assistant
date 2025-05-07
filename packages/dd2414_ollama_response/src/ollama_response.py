@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import os
-import sys
 import json
 import rospy
 import subprocess
@@ -34,7 +33,6 @@ class OllamaResponse:
         self.mp3_path = os.path.expanduser('/tmp/tts_audio.mp3')
         self.wav_path = os.path.expanduser('/tmp/tts_audio_wav.wav')
         
-        sys.setdefaultencoding('utf-8')
         rospy.loginfo("[Ollama Response]:Initialized")
         self.string_header = "[Ollama Response]:"
 

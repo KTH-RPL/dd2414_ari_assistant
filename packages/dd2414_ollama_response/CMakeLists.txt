@@ -9,6 +9,9 @@ project(dd2414_ollama_response)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   dd2414_brain_v2
+  dd2414_text_speech
+  dd2414_status_update
+  actionlib
   rospy
   std_msgs
 )
@@ -105,7 +108,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES dd2414_ollama_response
-#  CATKIN_DEPENDS dd2414_brain_v2 rospy std_msgs
+  CATKIN_DEPENDS dd2414_brain_v2 rospy std_msgs dd2414_text_speech dd2414_status_update actionlib ollama
 #  DEPENDS system_lib
 )
 
@@ -159,10 +162,10 @@ include_directories(
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-# catkin_install_python(PROGRAMS
-#   scripts/my_python_script
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+catkin_install_python(PROGRAMS
+  src/ollama_response.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
