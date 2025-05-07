@@ -27,6 +27,8 @@ class MoveBase:
         rospy.loginfo("[NAVIGATION     ]:Initialized")
         self.string_header = "[NAVIGATION     ]:"
 
+        self.timeout = rospy.Duration(10)
+
         
     def action(self,goal):
         result = brain.BrainResult()
@@ -64,7 +66,7 @@ class MoveBase:
     def nav_move_base(self,req_x, req_y):
         
         if(self.move_base_status != 0 and self.move_base_status != 1):
-            self.move_client.wait_for_server()
+            self.move_client.wait_for_server(self.timeout)
             rospy.loginfo("Move base client ready")
 
             goal = MoveBaseGoal()
@@ -81,7 +83,7 @@ class MoveBase:
 
             rospy.loginfo("[NAVIGATION     ]:Sending goal")
             self.move_client.send_goal(goal)
-            timeout = rospy.Duration(20)
+            
 
 
         status = self.move_client.get_state()

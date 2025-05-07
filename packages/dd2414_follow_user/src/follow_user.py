@@ -45,6 +45,11 @@ class ARIHeadFollower:
         self.head_2_min, self.head_2_max = -0.2, 0.4
 
         self.track_user
+
+        self.timeout = rospy.Duration(10)
+
+        self.move_client = actionlib.SimpleActionClient('/move_base', MoveBaseAction)
+        
         rospy.loginfo("[FOLLOW_USER    ]:Initialized")
 
     def asr_result(self,msg):
@@ -54,22 +59,21 @@ class ARIHeadFollower:
         if sentence.lower() == "stop":
             self.stop = True
             rospy.logdebug("[FOLLOW_USER    ]:Stoping Following behavior")
+            
+            # Cancel moving goals
+            self.move_client.cancel_all_goals()
+            
             result = brain.BrainResult()
             result.result = "Success"
             return result
         
-        #if sentence.lower() == "follow":
-        #    rospy.loginfo("Starting Following behavior")
-        #    self.tts_output("Starting Follow User behavior")
-        #    self.stop = False
 
     def map_range(self, value, in_min, in_max, out_min, out_max):
         """ Maps a value from one range to another """
         return out_min + (float(value - in_min) / float(in_max - in_min) * (out_max - out_min))
     
     def nav_move_base(self,x,y,z,rx,ry,rz,rw):
-        move_client = actionlib.SimpleActionClient('/move_base', MoveBaseAction)
-        move_client.wait_for_server()
+        self.move_client.wait_for_server(self.timeout)
 
         goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = "base_link"
@@ -83,13 +87,13 @@ class ARIHeadFollower:
         goal.target_pose.pose.orientation.w = rw
 
         rospy.logdebug("[FOLLOW_USER    ]:Sending goal")
-        move_client.send_goal(goal)
-        move_client.wait_for_result()
+        self.move_client.send_goal(goal)
+        self.move_client.wait_for_result()
 
-        rospy.logdebug(f"[FOLLOW_USER    ]:Goal state:{move_client.get_state()}")
-        rospy.logdebug("[FOLLOW_USER    ]:"+move_client.get_goal_status_text())
+        rospy.logdebug(f"[FOLLOW_USER    ]:Goal state:{self.move_client.get_state()}")
+        rospy.logdebug("[FOLLOW_USER    ]:"+self.move_client.get_goal_status_text())
         
-        return move_client.get_state()
+        return self.move_client.get_state()
     
     def round_number(self,x):
         return 1.5 if x >= 0 else -1.5
@@ -143,6 +147,7 @@ class ARIHeadFollower:
 
     def preempted(self):
         #Cancel CURRENT GOAL
+        self.move_client.cancel_all_goals()
         pass
 
     def track_user(self):
@@ -155,7 +160,7 @@ class ARIHeadFollower:
 
                     bodies = list(self.hri_listener.bodies.values())[0]
                     
-                    transform_bodies = bodies.transform()
+                    # transform_bodies = bodies.transform()
 
                     (t_bodies,r_bodies) = self._tf_Listener.lookupTransform("base_link",bodies.frame,rospy.Time(0))
 
@@ -169,7 +174,6 @@ class ARIHeadFollower:
                         head_goal.goal.target.header.frame_id = "base_link"
                         point = Point(x=t_bodies[0], y=t_bodies[1], z=t_bodies[2])
                         head_goal.goal.pointing_axis.x = 0.0
-                        #head_goal.goal.pointing_axis.y = 0.0
                         head_goal.goal.pointing_frame = "sellion_link"
 
                         angle = math.atan2(point.y,point.x)
@@ -184,33 +188,6 @@ class ARIHeadFollower:
 
                         head_goal.goal.target.point = point
                         self.look_at_goal.publish(head_goal)
-
-                        #head_1_pos = self.map_range(t_bodies[1], -np.pi/2, np.pi/2, self.head_1_min, self.head_1_max)
-                        #head_2_pos = 0 #self.map_range(t_bodies[2], 1.4, 1.8, self.head_2_min, self.head_2_max)
-
-                        # Publish movement command    
-                        #goal_msg = FollowJointTrajectoryActionGoal()
-                        #goal_msg.goal.trajectory.joint_names = ["head_1_joint", "head_2_joint"]
-                        #point = JointTrajectoryPoint()
-                        #point.positions = [head_1_pos, head_2_pos]
-                        #point.time_from_start = rospy.Duration(1.0)
-
-                        #if head_1_pos >=0.8 and head_1_pos < 2:
-                        #    facing = t.quaternion_from_euler(0,0,np.pi/2)
-                        #    point.positions = [0, 0]
-                        #    goal_msg.goal.trajectory.points.append(point)
-                        #    result = self.nav_move_base(0,0,0,facing[0],facing[1],facing[2],facing[3])
-
-                        #elif head_1_pos <=-0.8 and head_1_pos > -2:
-                        #    facing = t.quaternion_from_euler(0,0,-np.pi/2)
-                        #    point.positions = [0, 0]
-                        #    goal_msg.goal.trajectory.points.append(point)
-                        #    result = self.nav_move_base(0,0,0,facing[0],facing[1],facing[2],facing[3])
-
-                        #else:
-                        #    goal_msg.goal.trajectory.points.append(point)
-
-                        #self.head_pub.publish(goal_msg)
 
                     else:
                         self.approach(bodies.frame)
