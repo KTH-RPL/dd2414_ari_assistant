@@ -5,25 +5,58 @@ import actionlib
 from dd2414_status_update import StatusUpdate
 import dd2414_brain_v2.msg as brain
 from datetime import datetime
+import py_trees
 
-class ExplorationNode:
-    def __init__(self):
+class ExploreBehaviour(py_trees.behaviour.Behaviour):    
+    def __init__(self, name = "explore"):
+        super(ExploreBehaviour, self).__init__(name)
         self.current_goal = None
         rospy.loginfo("[EXPLORE        ]: Initialized")
         self.string_header = "[EXPLORE        ]:"
 
         self.rooms = ["mo_cap", "kitchen", "Inner_Office", "copy_room"]
 
-    def action(self, goal):
-        result = brain.BrainResult()
+        self.room_index = 0
+        self.client = actionlib.SimpleActionClient("/nav_move_base_server", brain.BrainAction)
+        self.sent_goal = False
+        self.timeout = rospy.Duration(10)
+    
+    def initialise(self):
+        self.sent_goal = False
+        self.start_time = rospy.Time.now()
+        self.room_index = 0
+        self.prioritized_rooms = self.get_prioritized_rooms()
 
-        rospy.loginfo(f"{self.string_header} Starting exploration.")
+    def update(self):
+        if not self.client.wait_for_server(self.timeout):
+            rospy.logerr("Navigation server not available")
+            return py_trees.common.Status.FAILURE
 
-        # Prioritize rooms for this round
-        prioritized_rooms = self.get_prioritized_rooms()        
-        
+        if self.room_index >= len(self.prioritized_rooms):
+            return py_trees.common.Status.SUCCESS
 
+        current_room = self.prioritized_rooms[self.room_index]
 
+        if not self.sent_goal:
+            goal = brain.BrainGoal()
+            goal.goal = current_room
+            self.client.send_goal(goal)
+            self.sent_goal = True
+            rospy.loginfo(f"{self.string_header} Going to {current_room}")
+
+        state = self.client.get_state()
+        if state == actionlib.GoalStatus.SUCCEEDED:
+            rospy.loginfo(f"{self.string_header} Reached {current_room}")
+            self.room_index += 1
+            self.sent_goal = False
+            return py_trees.common.Status.RUNNING
+        elif state in [actionlib.GoalStatus.PENDING, actionlib.GoalStatus.ACTIVE]:
+            return py_trees.common.Status.RUNNING
+        else:
+            rospy.logwarn(f"{self.string_header} Failed to reach {current_room}, skipping")
+            self.room_index += 1
+            self.sent_goal = False
+            return py_trees.common.Status.RUNNING
 
     def get_prioritized_rooms(self):
         current_hour = datetime.now().hour
@@ -47,5 +80,5 @@ class ExplorationNode:
 
 if __name__ == '__main__':
     rospy.init_node('exploration_node', anonymous=False,log_level=rospy.INFO)
-    server = StatusUpdate(rospy.get_name(), ExplorationNode)
+    server = StatusUpdate(rospy.get_name(), ExploreBehaviour)
     rospy.spin()
