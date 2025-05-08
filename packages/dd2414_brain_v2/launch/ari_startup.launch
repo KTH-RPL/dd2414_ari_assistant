@@ -12,5 +12,7 @@
   <node name="body_orientation_listener" pkg="dd2414_talking_orientation" type="body_orientation_listener.py"/>
   <node name="detect_people_looking_at_ari" pkg="dd2414_human_detection" type="detect_people_looking_at_ari.py"/>
   <node name="LLM" pkg="chatbox_ari" type="chatbox_ari.py"/>
+  <node name="expressive_eyes_divisor" pkg="expressive_eyes_divisor" type="expressive_eyes_divisor.py"/>
+  <node name="dd2414_parameter_server" pkg="dd2414_parameter_server" type="parameter_server.py"/>
 
 </launch>
