@@ -11,6 +11,7 @@ from cv_bridge import CvBridge
 import json
 import numpy as np
 from dd2414_status_update import StatusUpdate
+from std_msgs.msg import String
 import dd2414_brain_v2.msg as brain
 from geometry_msgs.msg import Point
 from pal_zoi_detector.srv import GetPointZoI, GetPointZoIRequest
@@ -39,6 +40,9 @@ class FaceRecognitionNode:
         # Load known faces from the file
         self.known_faces = self.load_known_faces()
         
+        # ROS subscribers
+        self.name_pub = rospy.Publisher('/face_recognition/user_name', String, queue_size=1)
+
         # ROS subscribers
         self.face_ids_sub = rospy.Subscriber("/humans/faces/tracked", IdsList, self.face_id_callback)
         self.face_images_subs = {}
@@ -71,6 +75,7 @@ class FaceRecognitionNode:
 
                 # Return name that was saved
                 result.in_dic = json.dumps({"name" : self.target_name})
+                
 
             else:
                 rospy.logdebug(f"[FACERECOGNITION]:Name unknown. Searching if we already know it.")
@@ -78,9 +83,12 @@ class FaceRecognitionNode:
 
                 # Return name if we know it
                 if name:
-                    result.in_dic = json.dumps({"name" : name })
+                    #result.in_dic = json.dumps({"name" : name })
+                    self.name_pub.publish(name)
                 else:
-                    result.in_dic = json.dumps({"name" : "unknown" })
+                    #result.in_dic = json.dumps({"name" : "unknown" })
+                    self.name_pub.publish(name)
+                    
                 rospy.loginfo(f"[FACERECOGNITION]:Name: "+ str(name))
 
             result.result = "Success"
