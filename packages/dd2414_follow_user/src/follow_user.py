@@ -58,7 +58,7 @@ class ARIHeadFollower:
         
         if sentence.lower() == "stop":
             self.stop = True
-            rospy.logdebug("[FOLLOW_USER    ]:Stoping Following behavior")
+            rospy.loginfo("[FOLLOW_USER    ]:Stoping Following behavior")
             
             # Cancel moving goals
             self.move_client.cancel_all_goals()
@@ -196,7 +196,7 @@ class ARIHeadFollower:
                 if self.stop:
                     self.stop = False
                     self.running = False
-                    rospy.logdebug("[FOLLOW_USER    ]:Returning stop")
+                    rospy.loginfo("[FOLLOW_USER    ]:Returning stop")
                     result.result = "Success"
                     return result
 
@@ -204,7 +204,7 @@ class ARIHeadFollower:
                 return result
             
             except Exception as e:
-                rospy.logwarn(f"Could not transform: {e}")
+                rospy.loginfo(f"Could not transform: {e}")
                 result = brain.BrainResult()
                 result.result = "Working"
                 return result
