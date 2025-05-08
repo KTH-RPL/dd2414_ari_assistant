@@ -22,10 +22,11 @@ class MoveBase:
                               "desk" : (-0.21023699455605094   , 0.08828129621303571)}
         self.rate = rospy.Rate(10)
         self.move_base_status = 3
-        self.current_goal = None
 
         rospy.loginfo("[NAVIGATION     ]:Initialized")
         self.string_header = "[NAVIGATION     ]:"
+
+        self.timeout = rospy.Duration(10)
 
         
     def action(self,goal):
@@ -36,7 +37,6 @@ class MoveBase:
             position = self.location_dict[goal.goal]
             result.result = self.nav_move_base(position[0],position[1])
 
-            self.current_goal = goal.goal
         else:
             result.result = "Failure"
 
@@ -56,7 +56,7 @@ class MoveBase:
     def nav_move_base(self,req_x, req_y):
         
         if(self.move_base_status != 0 and self.move_base_status != 1):
-            self.move_client.wait_for_server()
+            self.move_client.wait_for_server(self.timeout)
             rospy.loginfo("Move base client ready")
 
             goal = MoveBaseGoal()
@@ -73,7 +73,6 @@ class MoveBase:
 
             rospy.loginfo("[NAVIGATION     ]:Sending goal")
             self.move_client.send_goal(goal)
-            timeout = rospy.Duration(20)
 
 
         status = self.move_client.get_state()
@@ -84,12 +83,10 @@ class MoveBase:
         rospy.logdebug(f"{self.string_header} Result: {result}")
 
         if status == 3:
-            self.current_goal = None
             return "Success"
         elif status == 0 or status == 1:
             return "Working"
         else:
-            self.current_goal = None
             return "Failure"
 
 if __name__ == '__main__':

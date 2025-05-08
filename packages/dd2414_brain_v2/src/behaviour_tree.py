@@ -8,7 +8,6 @@ from std_msgs.msg import Bool
 import json
 import time
 from test_behaviour import TestBehaviour
-from greet_behaviour import GreetBehaviour
 from rospy.exceptions import ROSException
 import dd2414_brain_v2.msg as brain
 from dd2414_brain_v2.msg import BrainAction 
@@ -36,7 +35,7 @@ class Brain:
         self.namespace_dict = {
             "test"                 :"/test",
             #"stop"                 :self.stop,
-            #"remember user"        :self.name_assign,
+            "remember user"        :"/face_recognition_node",
             "go to"                :"/move_to_poi",
             "find speaker"         :"/ari_turn_to_speaker",
             "follow user"          :"/follow_user",
@@ -85,7 +84,7 @@ class Brain:
         self.action_dict = {
             "test"                 :TestBehaviour(name="test behaviour"),
             #"stop"                 :self.stop,
-            #"remember user"        :self.name_assign,
+            "remember user"        :self.behaviours['remember user'],
             "go to"                :go_to_behaviour,
             "find speaker"         :self.behaviours['find speaker'],
             "follow user"          :follow_user_behaviour,
