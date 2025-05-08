@@ -41,6 +41,12 @@ class StatusUpdate(py_trees.behaviour.Behaviour):
         ###################################
         rospy.loginfo(self.string_header + "Starting Execution of " + self._action_name)
 
+        if(goal.goal != ''):
+            self.goal = goal
+
+        #if(self._action_name != "/ollama_response"):
+        #    self.ollama_response_client.send_goal(self.goal)
+
         self._result.result = "Working" #Variable to store the status
         self.previous_goal = self.goal
 

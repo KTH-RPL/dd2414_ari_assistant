@@ -15,7 +15,7 @@ from dd2414_status_update import StatusUpdate
 
 class OllamaResponse:
     def __init__(self):
-        self.ip_ollama    = Client(host="http://localhost:11434")#Client(host="http://130.229.183.186:11434")
+        self.api          = Client(host="http://localhost:11434")#Client(host="http://130.229.183.186:11434")
         self.model_ollama = "mistral:latest"
         self.languages    = {"en":"English","es":"Spanish","de":"German","fr":"French","sv":"Swedish"}
         self.system_promt = "You are an office assistant robot called ARI. Be concise and helpful. "
@@ -61,6 +61,8 @@ class OllamaResponse:
         pass
 
     def tts_multilanguage_output(self,text,language):
+        rospy.loginfo("GTTS initializing")
+        rospy.loginfo(text)
         tts_audio = gTTS(text,lang=language)
 
         # Save the audio file
@@ -76,13 +78,16 @@ class OllamaResponse:
 
     def generate_response(self,phrase,intent,language):
         name_promt = ""
+        rospy.loginfo(f"{intent}: {phrase}")
+        rospy.loginfo(f"Name: {self.person_name}")
+
         if intent in ["greet","goodbye"] and self.person_name != "unknown":
             name_promt = "My name is: " + self.person_name + ". Include it in the response."
 
             completion = self.api.chat(
                 model=self.model_ollama, 
                 messages=[
-                {"role":"system","content": self.system_promt + name_promt +f" Respond in:{str(self.languages[language])}"},
+                {"role":"system","content": self.system_promt + name_promt +f" Answer in a short phrase and Respond in:{str(self.languages[language])}"},
                 {"role":"user","content": phrase},
                 ]
             )

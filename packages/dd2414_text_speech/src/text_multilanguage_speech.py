@@ -21,6 +21,8 @@ class TextMultilanguageSpeech:
 
         self.tts_client = SimpleActionClient("/tts",TtsAction)
         self.tts_client.wait_for_server()
+        self.rate = rospy.Rate(1)
+        self.talking = ""
 
         # Publishers
         self.speek_pub = rospy.Publisher("/tts/ARI_speeking",String,queue_size=10)
@@ -29,14 +31,20 @@ class TextMultilanguageSpeech:
         rospy.loginfo("Text-to-Speech Multilanguage Action Server is running.")
 
     def tts_output(self,text):
+        #self.speek_pub.publish("speeking")
+        self.talking ="speaking"
         goal                 = TtsGoal()
         goal.rawtext.lang_id = "en_US"
         goal.rawtext.text    = text
         self.tts_client.send_goal_and_wait(goal)
 
+    def run(self):
+        self.speek_pub.publish(self.talking)
+        self.rate.sleep()
+
     def action_cb(self, goal):
-        self.speek_pub.publish("speeking")
         rospy.loginfo("Received audio to play from LLM.")
+
         try:
             # Get the text and language from the goal
             text_path = goal.data 
@@ -47,11 +55,16 @@ class TextMultilanguageSpeech:
                 self.tts_output(text_path)
             else:
                 # Now load into simpleaudio and play
+                #self.speek_pub.publish("speeking")
+                self.talking = "speaking"
                 wave_obj = sa.WaveObject.from_wave_file(text_path)
                 play_obj = wave_obj.play()
                 play_obj.wait_done()
+                rospy.sleep(1.5)
 
             rospy.loginfo("TTS playback completed.")
+            rospy.sleep(1.2)
+            self.talking = ""
             self._as.set_succeeded()
 
         except Exception as e:
@@ -62,4 +75,7 @@ class TextMultilanguageSpeech:
 if __name__=="__main__":
     rospy.init_node('text_multilanguage_speech')
     server = TextMultilanguageSpeech()
-    rospy.spin()
+    while not rospy.is_shutdown():
+        server.run()
+        
+    
