@@ -22,9 +22,9 @@ class OllamaResponse:
         self.result       = brain.BrainResult()
         self.tts_goal     = tts.TextToSpeechMultilanguageGoal()
 
-        self.brain_person_name = "unknown"
+        self.person_name = "unknown"
 
-        rospy.Subscriber("/brain/user_name",String,self.update_brain_person)
+        rospy.Subscriber("/face_recognition/user_name",String,self.update_name_person)
 
         # Action client of TTS Multilanguages
         self.ac_ttsm = SimpleActionClient('text_multilanguage_speech', tts.TextToSpeechMultilanguageAction)
@@ -36,11 +36,11 @@ class OllamaResponse:
         rospy.loginfo("[Ollama Response]:Initialized")
         self.string_header = "[Ollama Response]:"
 
-    def update_brain_person(self,msg):
+    def update_name_person(self,msg):
         if not msg.data:
-            self.brain_person_name = "unknown"
+            self.person_name = "unknown"
         else:
-            self.brain_person_name = msg.data
+            self.person_name = msg.data
 
     def action(self,goal):
         try:
@@ -48,7 +48,7 @@ class OllamaResponse:
             language  = dictonary["language"]
             intent    = dictonary["intent"]
             phrase    = dictonary["phrase"]
-        
+
             return self.generate_response(phrase,intent,language)
         
         except Exception as e:
@@ -76,8 +76,8 @@ class OllamaResponse:
 
     def generate_response(self,phrase,intent,language):
         name_promt = ""
-        if intent in ["greet","goodbye"] and self.brain_person_name != "unknown":
-            name_promt = "My name is: " + self.brain_person_name + ". Include it in the response."
+        if intent in ["greet","goodbye"] and self.person_name != "unknown":
+            name_promt = "My name is: " + self.person_name + ". Include it in the response."
 
             completion = self.api.chat(
                 model=self.model_ollama, 

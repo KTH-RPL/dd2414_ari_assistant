@@ -20,6 +20,8 @@ class ChatboxARI:
         self.data_dic          = None
         self.string_header     = "[LLM            ]:"
         self.languages         = ["en","es","de","fr","sv"]
+        self.languages         = {"en":"English","es":"Spanish","de":"German","fr":"French","sv":"Swedish"}
+
         self.ari_speeking      = ""
         self.model_ollama      = "mistral:latest"
         self.verbose           = rospy.get_param("/verbose",False)
@@ -84,7 +86,7 @@ class ChatboxARI:
         goal.rawtext.text    = text
         self.tts_client.send_goal_and_wait(goal)
         self.tts_client.wait_for_result()
-        rospy.loginfo("Done")
+        
         self.ari_speeking    = ""
 
     def ari_speeking_state(self,msg):
@@ -158,7 +160,7 @@ class ChatboxARI:
     def run_stt(self):
         if self.data_dic == None or self.ari_speeking == "speeking":
             return
-        rospy.loginfo(self.data_dic)
+        
         self.listen= False
         
         self.stt_result   = self.data_dic["translation"]
@@ -175,7 +177,7 @@ class ChatboxARI:
             self.listen = True
             self.ready_to_process = False
 
-        if not self.stt_language in self.languages:
+        if not self.stt_language in list(self.languages.keys()):
             self.reject_message()
             self.listen = True
             self.ready_to_process = False
@@ -206,9 +208,9 @@ class ChatboxARI:
 
         if not self.intents[intent_result][0]:
             if intent_result == "provide information" or intent_result == "remember user":
-                response = self.ask_ollama(f"{user_input}. Response in 15 words")
-                if self.stt_language != 'en':
-                    response = GoogleTranslator(source='en', target=self.stt_language).translate(response)
+                response = self.ask_ollama(f"{user_input}. Answer in 15 words in {self.languages[self.stt_language]} language")
+                #if self.stt_language != 'en':
+                #    response = GoogleTranslator(source='en', target=self.stt_language).translate(response)
             else:
                 response = user_input
 
@@ -233,8 +235,8 @@ class ChatboxARI:
                 self.reject_message()
                 return 
             
-            rospy.loginfo(f"[LLM            ]:Ollama response: {response}")
-            rospy.loginfo(f"STT language: {self.stt_language}")
+            #rospy.loginfo(f"[LLM            ]:Ollama response: {response}")
+            #rospy.loginfo(f"STT language: {self.stt_language}")
             
             self.publish_intent(intent_result,parameter,response)
 
