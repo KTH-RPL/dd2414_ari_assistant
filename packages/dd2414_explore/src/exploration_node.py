@@ -21,7 +21,7 @@ class ExploreBehaviour(py_trees.behaviour.Behaviour):
         self.sent_goal = False
         self.timeout = rospy.Duration(10)
     
-    def setup(self):
+    def initialise(self):
         self.sent_goal = False
         self.room_index = 0
         self.prioritized_rooms = self.get_prioritized_rooms()
@@ -33,9 +33,6 @@ class ExploreBehaviour(py_trees.behaviour.Behaviour):
             return py_trees.common.Status.FAILURE
 
         if self.room_index >= len(self.prioritized_rooms):
-            self.sent_goal = False
-            self.room_index = 0
-            self.prioritized_rooms = self.get_prioritized_rooms()
             return py_trees.common.Status.SUCCESS
 
         current_room = self.prioritized_rooms[self.room_index]
@@ -64,9 +61,6 @@ class ExploreBehaviour(py_trees.behaviour.Behaviour):
     def terminate(self):
         # Cancel goal
         self.client.cancel_all_goals()
-        self.sent_goal = False
-        self.room_index = 0
-        self.prioritized_rooms = self.get_prioritized_rooms()
 
 
     def get_prioritized_rooms(self):
