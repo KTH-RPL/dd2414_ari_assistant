@@ -20,6 +20,9 @@ class StatusUpdate(py_trees.behaviour.Behaviour):
         self.input_sub = rospy.Subscriber(f"/brain{self._action_name}", brain.BrainGoal, self.input_cb)
         rospy.logdebug(f"Subscribed to /brain{self._action_name}")
         self.goal = None
+        self.previous_goal = None
+
+        self.ollama_response_client = actionlib.SimpleActionClient("/ollama_response",brain.BrainAction)
 
         self.rate = rospy.Rate(2)
 
@@ -34,37 +37,56 @@ class StatusUpdate(py_trees.behaviour.Behaviour):
 
         #Insert Code for new GOAL SETUP HERE
 
-        # Overwrite goal so it can be assigned dynamically
-        if(self.goal is not None):
-            goal = self.goal
-
         ###################################
         rospy.loginfo(self.string_header + "Starting Execution of " + self._action_name)
+        
+        
         self._result.result = "Working" #Variable to store the status
 
-        if self._as.is_preempt_requested():
-            #If goal has been canceled perform necessary shutdown behavior
-            self.node.preempted()
-            ##################################################
-            self._as.set_preempted()
-            rospy.loginfo(self.string_header + "Goal Preempted.")
-        else:
+        if(goal.goal != ''):
+            self.goal = goal
 
-            self._feedback.feedback = self._result.result
-            self._feedback.in_dic = self._result.in_dic
-            self._as.publish_feedback(self._feedback)
-            self._result = self.node.action(self.goal)
-            self.rate.sleep()
-                
-            if self._result.result == "Success":
-                
-                rospy.loginfo(self.string_header + "Action Server " + self._action_name + " Succeded.")
-                self._as.set_succeeded(self._result)
-            else:
+        if(self._action_name != "/ollama_response" and not (self._action_name == "/face_recognition_node" and self.goal.goal == "unknown")):
+            self.ollama_response_client.send_goal(self.goal)
+
+        self.previous_goal = self.goal
+
+        while(self._result.result == "Working" and not rospy.is_shutdown()):
+            
+            #If a new goal has been sent, preempt to cancel current goal
+            if(self.previous_goal != self.goal):
+                self.node.preempted()
+                self.previous_goal = self.goal
+
+            if self._as.is_preempt_requested():
+                #If goal has been canceled perform necessary shutdown behavior
+                self.node.preempted()
+                ##################################################
                 self._result.result = "Failure"
-                rospy.loginfo("Action Server " + self._action_name + " Aborted.")
-                self._as.set_aborted(self._result)
-    
+                self._as.set_preempted()
+                rospy.loginfo(self.string_header + "Goal Preempted.")
+            else:
+ 
+                self._feedback.feedback = self._result.result
+                self._feedback.in_dic = self._result.in_dic
+                self._as.publish_feedback(self._feedback)
+                self._result = self.node.action(self.goal)
+                self.rate.sleep()
+                    
+            
+            self.rate.sleep()
+
+        if self._result.result == "Success":
+                
+            rospy.loginfo(self.string_header + "Action Server " + self._action_name + " Succeded.")
+            self._as.set_succeeded(self._result)
+        else:
+            self._result.result = "Failure"
+            rospy.loginfo("Action Server " + self._action_name + " Aborted.")
+            self._as.set_aborted(self._result)
+
+        self.rate.sleep()
+
     def input_cb(self, data):
         rospy.loginfo(f"[{self._action_name}]: StatusUpdate received input {data}")
         self.goal = data

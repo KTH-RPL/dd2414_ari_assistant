@@ -24,20 +24,19 @@ class LookAtFace:
         self.string_header = "[LOOK_AT_PERSON ]:"
 
     def action(self,goal):
-        if(goal == "start"):
+        if(goal.goal == "start"):
             self.active = True
             self.result.result = "Success"
-            return self.result
 
-        elif(goal == "stop"):
+        elif(goal.goal == "stop"):
             self.active = False
             self.look_forward()
             self.result.result = "Success"
-            return self.result
         
         else:
             self.result.result = "Failure"
-            return self.result
+        
+        return self.result
     
     def preempted(self):
         self.active = False

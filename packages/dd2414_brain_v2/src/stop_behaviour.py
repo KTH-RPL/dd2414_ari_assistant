@@ -6,31 +6,28 @@ import rospy
 from std_msgs.msg import String
 from std_msgs.msg import Bool
 
-class TestBehaviour(py_trees.behaviour.Behaviour):
-    def __init__(self, name: str):
+class StopBehaviour(py_trees.behaviour.Behaviour):
+    def __init__(self, name: str, action_dict: dict):
 
-        super(TestBehaviour, self).__init__(name=name)
+        super(StopBehaviour, self).__init__(name=name)
         
         self.blackboard = py_trees.blackboard.Blackboard()
         self.counter = 0
+        self.action_dict = action_dict
 
     def setup(self, timeout):
-        rospy.logdebug("[TestBehaviour] {}.setup()".format(self.name))
+        rospy.logdebug("[StopBehaviour] {}.setup()".format(self.name))
         self.feedback_message = "behaviour created"
         return True
 
     def update(self) -> py_trees.common.Status:
-        print(self.name)
-        self.counter+=1
 
-        # INPUTS print('---------', self.blackboard.inputs[self.name])
+        for action in self.action_dict:
+            self.blackboard.set(action, False)
 
-        # When behaviour is done
-        if(self.counter > 10):
-            self.blackboard.set(self.name, False)
-            self.feedback_message = "success"
-            counter = 0
-            return py_trees.common.Status.SUCCESS
+        print("BLACKBOARD: ", self.blackboard)
+
+        return py_trees.common.Status.SUCCESS
 
         rospy.logdebug("%s.update()" % self.__class__.__name__)
         self.feedback_message = "running"
@@ -45,9 +42,7 @@ class TestBehaviour(py_trees.behaviour.Behaviour):
             )
         )
 
-        #self.feedback_message = "cleared"
-
 if __name__ == '__main__':
     
-    rospy.init_node('test_behaviour_node',anonymous=False)
+    rospy.init_node('stop_behaviour_node',anonymous=False)
     rospy.spin()

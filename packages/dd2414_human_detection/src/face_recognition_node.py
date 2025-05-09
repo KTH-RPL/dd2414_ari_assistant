@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import actionlib
 import rospy
 import os
 import cv2
@@ -11,6 +12,7 @@ from cv_bridge import CvBridge
 import json
 import numpy as np
 from dd2414_status_update import StatusUpdate
+from std_msgs.msg import String
 import dd2414_brain_v2.msg as brain
 from geometry_msgs.msg import Point
 from pal_zoi_detector.srv import GetPointZoI, GetPointZoIRequest
@@ -29,7 +31,8 @@ class FaceRecognitionNode:
         self.current_id = None
 
         self._tf_Listener = TransformListener()
-        
+
+        self.ollama_response_client = actionlib.SimpleActionClient("/ollama_response",brain.BrainAction)
         
         # Paths for saving data
         self.database_path = os.path.dirname(__file__)
@@ -39,6 +42,9 @@ class FaceRecognitionNode:
         # Load known faces from the file
         self.known_faces = self.load_known_faces()
         
+        # ROS subscribers
+        self.name_pub = rospy.Publisher('/face_recognition/user_name', String, queue_size=1)
+
         # ROS subscribers
         self.face_ids_sub = rospy.Subscriber("/humans/faces/tracked", IdsList, self.face_id_callback)
         self.face_images_subs = {}
@@ -61,7 +67,7 @@ class FaceRecognitionNode:
             # If face not yet seen FAILURE, can not save name or search for name
             if self.current_id is None:
                 rospy.logwarn("[FACERECOGNITION]:No face detected to save.")
-                result.result = "Failed"
+                result.result = "Failure"
                 return result
 
             # Save name if its not unknown
@@ -71,6 +77,8 @@ class FaceRecognitionNode:
 
                 # Return name that was saved
                 result.in_dic = json.dumps({"name" : self.target_name})
+                
+                
 
             else:
                 rospy.logdebug(f"[FACERECOGNITION]:Name unknown. Searching if we already know it.")
@@ -78,10 +86,14 @@ class FaceRecognitionNode:
 
                 # Return name if we know it
                 if name:
-                    result.in_dic = json.dumps({"name" : name })
+                    #result.in_dic = json.dumps({"name" : name })
+                    self.name_pub.publish(name)
                 else:
-                    result.in_dic = json.dumps({"name" : "unknown" })
+                    #result.in_dic = json.dumps({"name" : "unknown" })
+                    self.name_pub.publish(name)
+                    
                 rospy.loginfo(f"[FACERECOGNITION]:Name: "+ str(name))
+                self.ollama_response_client.send_goal(goal)
 
             result.result = "Success"
             rospy.logdebug(result)
@@ -251,11 +263,11 @@ class FaceRecognitionNode:
                 index = self.known_faces["ids"].index(face_id)
                 self.known_faces["names"][index] = name
                 self.save_known_faces()
-                rospy.logdebug(f"Assigned name {name} to face ID {face_id}")
+                rospy.logdebug(f"[FACERECOGNITION]:Assigned name {name} to face ID {face_id}")
             except ValueError:
-                rospy.logwarn("Face ID not found in known faces.")
+                rospy.logwarn("[FACERECOGNITION]:Face ID not found in known faces.")
         else:
-            rospy.logwarn("No recognized face to assign a name.")
+            rospy.logwarn("[FACERECOGNITION]:No recognized face to assign a name.")
 
 
     def add_location_to_face(self, temporal_face_id):
@@ -265,7 +277,7 @@ class FaceRecognitionNode:
             try:
                 index = self.known_faces["ids"].index(face_id)
             except ValueError:
-                rospy.logwarn("Face ID not found for location update.")
+                rospy.logwarn("[FACERECOGNITION]:Face ID not found for location update.")
                 return
 
             faces = list(self.hri_listener.faces.values())
@@ -293,7 +305,7 @@ class FaceRecognitionNode:
                 self.save_known_faces()
 
         else:
-            rospy.logwarn("No recognized face to assign a location.")
+            rospy.logwarn("[FACERECOGNITION]:No recognized face to assign a location.")
 
 
     
@@ -305,7 +317,7 @@ class FaceRecognitionNode:
             try:
                 index = self.known_faces["ids"].index(face_id)
             except ValueError:
-                rospy.logwarn("Face ID not found for location update.")
+                rospy.logwarn("[FACERECOGNITION]:Face ID not found for location update.")
                 return
 
         # Obtain name
@@ -342,14 +354,14 @@ class FaceRecognitionNode:
             # Access the first zone of interest (zois is a list)
             if response.zois.zois:
                 zone_of_interest = response.zois.zois[0]  # Get the first ZoI string
-                rospy.logdebug(f"Zone of Interest: {zone_of_interest}")
+                rospy.logdebug(f"[FACERECOGNITION]:Zone of Interest: {zone_of_interest}")
                 return zone_of_interest
             else:
                 rospy.logwarn("No zones of interest returned.")
                 return None
 
         except rospy.ServiceException as e:
-            rospy.logerr("Service call failed: %s" % e)
+            rospy.logerr("[FACERECOGNITION]:Service call failed: %s" % e)
             return None
 
 
