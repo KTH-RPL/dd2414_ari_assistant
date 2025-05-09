@@ -23,7 +23,6 @@ class ExploreBehaviour(py_trees.behaviour.Behaviour):
     
     def initialise(self):
         self.sent_goal = False
-        self.start_time = rospy.Time.now()
         self.room_index = 0
         self.prioritized_rooms = self.get_prioritized_rooms()
 
