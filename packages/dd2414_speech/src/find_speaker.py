@@ -86,9 +86,7 @@ class FindSpeakerActionServer:
 
         self.move_base_client.send_goal(goal)
         self.turning_goal = goal
-        print("sending goal to move_base client")
         self.move_base_client.wait_for_result()
-        print("goal completed")
 
         self.turning_to_speech = False
 
@@ -105,7 +103,7 @@ class FindSpeakerActionServer:
     # When body looking at ari is detected, turn to body
     def person_found_cb(self, data):
         if(data.data != "" and self.finding_speaker_active):
-            rospy.logdebug("[FIND_SPEAKER   ]:Found body looking at ari")
+            rospy.loginfo("[FIND_SPEAKER   ]:Found body looking at ari")
             self.finding_speaker_active = False
             self.result.result = "Success"
             
@@ -174,7 +172,7 @@ if __name__ == '__main__':
 
     try:
         # Initialize the node
-        rospy.init_node('find_speaker', anonymous=True,log_level=rospy.INFO)
+        rospy.init_node('find_speaker', anonymous=False,log_level=rospy.INFO)
         server = StatusUpdate(rospy.get_name(),FindSpeakerActionServer)
         rospy.spin()
         

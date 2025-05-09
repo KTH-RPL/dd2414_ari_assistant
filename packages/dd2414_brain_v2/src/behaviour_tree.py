@@ -8,13 +8,11 @@ from std_msgs.msg import Bool
 import json
 import time
 from test_behaviour import TestBehaviour
-from greet_behaviour import GreetBehaviour
 from rospy.exceptions import ROSException
 import dd2414_brain_v2.msg as brain
 from dd2414_brain_v2.msg import BrainAction 
 
 import actionlib
-
 
 import py_trees
 import py_trees_ros
@@ -37,8 +35,8 @@ class Brain:
         self.namespace_dict = {
             "test"                 :"/test",
             #"stop"                 :self.stop,
-            #"remember user"        :self.name_assign,
-            "go to"                :"/nav_move_base_server",
+            "remember user"        :"/face_recognition_node",
+            "go to"                :"/move_to_poi",
             "find speaker"         :"/ari_turn_to_speaker",
             "follow user"          :"/follow_user",
             #"translate"            :self.translate,
@@ -67,17 +65,27 @@ class Brain:
             except ROSException as e:
                 rospy.logwarn(f"Could not connect to {self.namespace_dict[action]}")
 
+        [look_at_face_behaviour, stop_look_at_face_behaviour] = self.setup_look_at_face()
+        
+        
+        go_to_behaviour = py_trees.Sequence(
+            "Stop looking at person, go to",
+            [stop_look_at_face_behaviour, self.behaviours['go to'], look_at_face_behaviour]
+        )
 
         follow_user_behaviour = py_trees.Sequence(
             "Find speaker, then follow user", 
-            [self.behaviours["find speaker"], self.behaviours["follow user"]])           
+            [self.behaviours["find speaker"], 
+             stop_look_at_face_behaviour, 
+             self.behaviours["follow user"],
+             look_at_face_behaviour])           
 
         # Actions in order of priority (higher priority are further up)
         self.action_dict = {
             "test"                 :TestBehaviour(name="test behaviour"),
             #"stop"                 :self.stop,
-            #"remember user"        :self.name_assign,
-            "go to"                :self.behaviours['go to'],
+            "remember user"        :self.behaviours['remember user'],
+            "go to"                :go_to_behaviour,
             "find speaker"         :self.behaviours['find speaker'],
             "follow user"          :follow_user_behaviour,
             #"translate"            :self.translate,
@@ -91,13 +99,19 @@ class Brain:
             self.blackboard.set(action, False)
             self.blackboard.set(f"failcounter {action}", 0)
 
-            
-
         # Set up behaviours and construct tree
         root = py_trees.composites.Parallel(policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ALL)
 
         # For every action, set up condition (action requested) and behaviour (action)
         for action in self.action_dict:
+
+            if(not self.service_is_available(self.namespace_dict[action])):
+                rospy.logwarn(f"Service {self.namespace_dict[action]} not available, skipping {action} behaviour")
+                #root.add_child(py_trees.behaviours.Success(name=f"Mock {action}"))
+                continue
+            
+            behaviour = self.action_dict[action]
+
             # Create condition to check if action is requested
             condition = py_trees.blackboard.CheckBlackboardVariable(
                 name=f"{action} action not requested?",
@@ -134,7 +148,7 @@ class Brain:
                 ]
             )
             # Create behaviour to be executed if action is requested
-            behaviour = self.action_dict[action]
+            
 
             incrementor = py_trees.behaviours.Failure(name="IncrementCounter")
             incrementor.update = (lambda a=action: self.increment_fail_counter(a) or py_trees.common.Status.FAILURE)
@@ -163,9 +177,11 @@ class Brain:
                 ])
 
         self.behaviour_tree = py_trees.trees.BehaviourTree(root=root)
-        print(py_trees.display.print_ascii_tree(root=self.behaviour_tree.root))
+        print(py_trees.display.print_ascii_tree(root=self.behaviour_tree.root))        
 
-        self.behaviour_tree.setup(timeout=15)
+        self.behaviour_tree.setup(timeout=10)
+
+        look_at_face_behaviour.tick_once()
         rospy.loginfo("Brain Finished Initializing")
 
     def print_tree(self, tree: py_trees.trees.BehaviourTree) -> None:
@@ -187,14 +203,43 @@ class Brain:
         if(self.publishers_dict[intent] and self.intent_dict.get('input')):
             goal = brain.BrainGoal()
             goal.goal=self.intent_dict['input']
+            goal.in_dic = json.dumps(self.intent_dict)
+
             self.publishers_dict[intent].publish(goal)
     
+    def setup_look_at_face(self):
+        if(self.service_is_available("/face_gaze_tracker")):
+            look_at_face_goal = brain.BrainGoal()
+            look_at_face_goal.goal = "start"
+            look_at_face_behaviour = py_trees_ros.actions.ActionClient(
+                    name="Look at face",
+                    action_namespace="face_gaze_tracker",
+                    action_spec=brain.BrainAction,
+                    action_goal=look_at_face_goal)
+            
+            stop_look_at_face_goal = brain.BrainGoal()
+            stop_look_at_face_goal.goal = "stop"
+            stop_look_at_face_behaviour = py_trees_ros.actions.ActionClient(
+                    name="Stop look at face",
+                    action_namespace="face_gaze_tracker",
+                    action_spec=brain.BrainAction,
+                    action_goal=stop_look_at_face_goal)
+            return [look_at_face_behaviour, stop_look_at_face_behaviour]
+        else:
+            look_at_face_behaviour = py_trees.behaviours.Success(name="Mock look at face")
+            stop_look_at_face_behaviour = py_trees.behaviours.Success(name="Mock stop look at face")
+            return [look_at_face_behaviour, stop_look_at_face_behaviour]
+
     def action_requested(self, action):
         return self.current_requested_intent == action
 
     def shutdown(self):
         rospy.loginfo("Shutting Down Brain Node")
         #self.robot.run_action("stop",{})
+
+    def service_is_available(self, name, timeout=2.0):
+        client = actionlib.SimpleActionClient(name, brain.BrainAction)
+        return client.wait_for_server(timeout=rospy.Duration(timeout))
 
 if __name__ == '__main__':
     rospy.init_node('brain',anonymous=False)

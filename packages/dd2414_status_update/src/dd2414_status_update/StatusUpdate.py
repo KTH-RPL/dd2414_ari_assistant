@@ -22,6 +22,8 @@ class StatusUpdate(py_trees.behaviour.Behaviour):
         self.goal = None
         self.previous_goal = None
 
+        self.ollama_response_client = actionlib.SimpleActionClient("/ollama_response",brain.BrainAction)
+
         self.rate = rospy.Rate(2)
 
         if hasattr(self.node,"string_header"):
@@ -35,22 +37,21 @@ class StatusUpdate(py_trees.behaviour.Behaviour):
 
         #Insert Code for new GOAL SETUP HERE
 
-        # Overwrite goal so it can be assigned dynamically
-        
-
         ###################################
         rospy.loginfo(self.string_header + "Starting Execution of " + self._action_name)
+        
+        
+        self._result.result = "Working" #Variable to store the status
 
         if(goal.goal != ''):
             self.goal = goal
 
-        #if(self._action_name != "/ollama_response"):
-        #    self.ollama_response_client.send_goal(self.goal)
+        if(self._action_name != "/ollama_response"):
+            self.ollama_response_client.send_goal(self.goal)
 
-        self._result.result = "Working" #Variable to store the status
         self.previous_goal = self.goal
 
-        while(self._result.result == "Working"):
+        while(self._result.result == "Working" and not rospy.is_shutdown()):
             
             #If a new goal has been sent, preempt to cancel current goal
             if(self.previous_goal != self.goal):
@@ -61,6 +62,7 @@ class StatusUpdate(py_trees.behaviour.Behaviour):
                 #If goal has been canceled perform necessary shutdown behavior
                 self.node.preempted()
                 ##################################################
+                self._result.result = "Failure"
                 self._as.set_preempted()
                 rospy.loginfo(self.string_header + "Goal Preempted.")
             else:
