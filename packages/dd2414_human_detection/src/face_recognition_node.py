@@ -77,7 +77,7 @@ class FaceRecognitionNode:
 
                 # Return name that was saved
                 result.in_dic = json.dumps({"name" : self.target_name})
-                self.ollama_response_client.send_goal(goal)
+                
                 
 
             else:
@@ -93,6 +93,7 @@ class FaceRecognitionNode:
                     self.name_pub.publish(name)
                     
                 rospy.loginfo(f"[FACERECOGNITION]:Name: "+ str(name))
+                self.ollama_response_client.send_goal(goal)
 
             result.result = "Success"
             rospy.logdebug(result)
