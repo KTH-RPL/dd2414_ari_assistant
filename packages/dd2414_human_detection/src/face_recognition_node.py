@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import actionlib
 import rospy
 import os
 import cv2
@@ -30,7 +31,8 @@ class FaceRecognitionNode:
         self.current_id = None
 
         self._tf_Listener = TransformListener()
-        
+
+        self.ollama_response_client = actionlib.SimpleActionClient("/ollama_response",brain.BrainAction)
         
         # Paths for saving data
         self.database_path = os.path.dirname(__file__)
@@ -75,6 +77,7 @@ class FaceRecognitionNode:
 
                 # Return name that was saved
                 result.in_dic = json.dumps({"name" : self.target_name})
+                self.ollama_response_client.send_goal(goal)
                 
 
             else:
