@@ -64,6 +64,9 @@ class ExploreBehaviour(py_trees.behaviour.Behaviour):
     def terminate(self):
         # Cancel goal
         self.client.cancel_all_goals()
+        self.sent_goal = False
+        self.room_index = 0
+        self.prioritized_rooms = self.get_prioritized_rooms()
 
 
     def get_prioritized_rooms(self):
