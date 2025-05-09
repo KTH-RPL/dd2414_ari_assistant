@@ -244,9 +244,6 @@ class FaceRecognitionNode:
             # Save encoding and names to the database
             self.save_known_faces()
 
-            # Save the image to disk
-            face_path = os.path.join(self.database_path, f"{new_id}.jpg")
-            cv2.imwrite(face_path, image)
         
         return new_id
 
