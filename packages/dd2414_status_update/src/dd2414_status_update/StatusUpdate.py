@@ -62,6 +62,7 @@ class StatusUpdate(py_trees.behaviour.Behaviour):
                 #If goal has been canceled perform necessary shutdown behavior
                 self.node.preempted()
                 ##################################################
+                self._result.result = "Failure"
                 self._as.set_preempted()
                 rospy.loginfo(self.string_header + "Goal Preempted.")
             else:
