@@ -17,7 +17,7 @@ class ExploreBehaviour(py_trees.behaviour.Behaviour):
         self.rooms = ["mo_cap", "kitchen", "Inner_Office", "copy_room"]
 
         self.room_index = 0
-        self.client = actionlib.SimpleActionClient("/nav_move_base_server", brain.BrainAction)
+        self.client = actionlib.SimpleActionClient("/move_to_poi", brain.BrainAction)
         self.sent_goal = False
         self.timeout = rospy.Duration(10)
     
