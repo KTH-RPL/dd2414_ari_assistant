@@ -8,6 +8,7 @@ from std_msgs.msg import Bool
 import json
 import time
 from stop_behaviour import StopBehaviour
+from exploration_node import ExploreBehaviour
 from rospy.exceptions import ROSException
 import dd2414_brain_v2.msg as brain
 from dd2414_brain_v2.msg import BrainAction 
@@ -45,6 +46,7 @@ class Brain:
             #"speech"               :self.text_to_speech,
             "greet"                :"/face_recognition_node",
             "goodbye"              :"/face_recognition_node",
+            "explore"              :"/ollama_response"
         }
 
 
@@ -81,15 +83,28 @@ class Brain:
              self.behaviours["follow user"],
              look_at_face_behaviour])
         
+        stop_behaviour = py_trees.Sequence(
+            "Stop actions, look at speaker",
+            [StopBehaviour(name="stop behaviour", action_dict=self.namespace_dict),
+            look_at_face_behaviour]
+        )
+        
         greet_behaviour = self.behaviours["face recognition"]
 
         remember_user_behaviour = self.behaviours["face recognition"]
         
         goodbye_behaviour = self.behaviours["face recognition"]
 
+        explore_behaviour = py_trees.Sequence(
+            "Talk, explore",
+            [self.behaviours["explore"],
+            ExploreBehaviour(name="Explore the office"),
+            ]
+        )
+
         # Actions in order of priority (higher priority are further up)
         self.action_dict = {
-            "stop"                 :StopBehaviour(name="stop behaviour", action_dict=self.namespace_dict),
+            "stop"                 :stop_behaviour,
             #"stop"                 :self.stop,
             "remember user"        :remember_user_behaviour,
             "face recognition"     :self.behaviours["face recognition"],
@@ -101,6 +116,7 @@ class Brain:
             #"speech"               :self.text_to_speech,
             "greet"                :greet_behaviour,
             "goodbye"              :goodbye_behaviour,
+            "explore"              :explore_behaviour
             }      
 
         for action in self.action_dict:
@@ -113,7 +129,7 @@ class Brain:
         # For every action, set up condition (action requested) and behaviour (action)
         for action in self.action_dict:
 
-            if(not self.service_is_available(self.namespace_dict[action]) and not action=="stop"):
+            if(not self.service_is_available(self.namespace_dict[action]) and not action=="stop" and not action=="explore"):
                 rospy.logwarn(f"Service {self.namespace_dict[action]} not available, skipping {action} behaviour")
                 #root.add_child(py_trees.behaviours.Success(name=f"Mock {action}"))
                 continue
@@ -245,7 +261,7 @@ class Brain:
     def shutdown(self):
         rospy.loginfo("Shutting Down Brain Node")
 
-    def service_is_available(self, name, timeout=2.0):
+    def service_is_available(self, name, timeout=1.0):
         client = actionlib.SimpleActionClient(name, brain.BrainAction)
         return client.wait_for_server(timeout=rospy.Duration(timeout))
 
