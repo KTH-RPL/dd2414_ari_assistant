@@ -35,6 +35,7 @@ class TranslateConversation:
         self.stt_language = "" 
         self.ari_speeking = ""
         self.translating  = ""
+        self.data_dic     = ""
         self.translator   = Translator()
 
     def ari_speeking_state(self,msg):
@@ -45,10 +46,10 @@ class TranslateConversation:
             return
 
         try:
-            data_dic          = msg.data
-            data_dic          = json.loads(data_dic)
-            self.phrase       = data_dic["translation"]
-            self.stt_language = data_dic["language"]
+            self.data_dic = msg.data
+            data_dic      = json.loads(data_dic)
+            phrase        = data_dic["translation"]
+            stt_language  = data_dic["language"]
 
             rospy.loginfo(self.phrase,self,self.stt_language)
 
@@ -75,8 +76,16 @@ class TranslateConversation:
             #dictonary        = json.loads(goal.in_dic)
             source_language  = str(goal.goal) #dictonary["source"]
             target_language  = str(goal.in_dic)#dictonary["target"]
+            
+            if self.data_dic != None:
+                data_dic     = json.loads(self.data_dic)
+                phrase       = data_dic["translation"]
+                stt_language = data_dic["language"]
 
-            return self.generate_translation(self.phrase,source_language,target_language,self.stt_language)
+                return self.generate_translation(phrase,source_language,target_language,stt_language)
+            else:
+                self.result.result = "Working"
+                self.translate_pub.publish("translating")
         
         except Exception as e:
             rospy.logerr(f"Empty Goal: {e}")
