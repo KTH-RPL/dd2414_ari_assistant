@@ -175,7 +175,7 @@ class ChatboxARI:
             return
         
     def run_stt(self):
-        rospy.loginfo(f"Listen: {self.listen}, Process: {self.ready_to_process}, Stop: {self.stop}, Speeking:{self.ari_speeking}, Data:{self.data_dic}")
+        rospy.loginfo(f"Listen: {self.listen}, Process: {self.ready_to_process}, Stop: {self.stop}, Speeking:{self.ari_speeking}, Translating:{self.ari_translating}, Data:{self.data_dic}")
 
         if self.ari_speeking == "speaking" or not self.listen or self.data_dic==None or self.ari_translating=="translating":
             return
