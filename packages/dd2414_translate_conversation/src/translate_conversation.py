@@ -74,7 +74,7 @@ class TranslateConversation:
             source_language  = str(goal.goal) #dictonary["source"]
             target_language  = str(goal.in_dic)#dictonary["target"]
 
-            return self.generate_translation(source_language,target_language,self.stt_language)
+            return self.generate_translation(self.phrase,source_language,target_language,self.stt_language)
         
         except Exception as e:
             rospy.logerr(f"Empty Goal: {e}")
@@ -86,18 +86,18 @@ class TranslateConversation:
     def preempted(self):
         pass
 
-    def generate_translation(self,src_language,target_language,language_stt):
+    def generate_translation(self,phrase,src_language,target_language,language_stt):
         try:
             self.translate_pub.publish("translating")
             self.result.result = "Working"
 
-            if language_stt:
+            if language_stt and phrase:
                 if not self.stop:
                     languages  = [src_language,target_language]
 
                     if language_stt in languages:
                         to_lang     = languages.index(language_stt-1)
-                        result_text = self.translator.translate(self.text, src="en", dest=to_lang)
+                        result_text = self.translator.translate(phrase, src="en", dest=to_lang)
             
                     else:
                         to_lang     = language_stt
@@ -110,6 +110,7 @@ class TranslateConversation:
                     # Send audio goal
                     rospy.loginfo("[Ollama Response]:Response sent to TTS")
                     #self.ac_ttsm.send_goal_and_wait(self.tts_goal)
+                    rospy.loginfo(goal)
                     self.ac_ollama_response.publish(goal)
 
                     if self.stop:
