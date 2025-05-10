@@ -1,0 +1,130 @@
+#!/usr/bin/python3
+import rospy
+import json
+import dd2414_brain_v2.msg as brain
+import dd2414_text_speech.msg as tts 
+
+from actionlib import SimpleActionClient
+from googletrans import Translator
+from std_msgs.msg import String
+from dd2414_status_update import StatusUpdate
+
+class TranslateConversation:
+    def __init__(self):
+        self.result = brain.BrainResult()
+        self.tts_goal = tts.TextToSpeechMultilanguageGoal()
+
+        # Action client of TTS Multilanguages
+        self.ac_ttsm = SimpleActionClient('text_multilanguage_speech', tts.TextToSpeechMultilanguageAction)
+        self.ac_ttsm.wait_for_server()
+
+        rospy.loginfo("[Translate Conversation]:Initialized")
+        self.string_header = "[Translate Conversation]:"
+
+        # Subscribers
+        #rospy.Subscriber("/humans/voices/anonymous_speaker/speech",LiveSpeech,self.asr_result)
+        rospy.Subscriber("/tts/ARI_speeking",String,self.ari_speeking_state)
+        rospy.Subscriber("/stt/transcript",String,self.stt)
+
+        self.translate_pub = rospy.Publisher("/translate_conversation",String,queue_size=10)
+
+        self.text         = None
+        self.stop         = False
+        self.stt_language = "" 
+        self.ari_speeking = ""
+        self.translating  = ""
+        self.translator   = Translator()
+
+    def ari_speeking_state(self,msg):
+        self.ari_speeking = msg.data
+
+    def stt(self,msg):
+        if not msg.data:
+            return
+
+        try:
+            data_dic          = msg.data
+            data_dic          = json.loads(data_dic)
+            self.phrase       = data_dic["translation"]
+            self.stt_language = data_dic["language"]
+
+            if "stop" in (self.phrase).lower() and len(self.phrase.split())<2:
+                self.stop = True
+                rospy.loginfo("[Translate Conversation]:Stoping Translate Conversation behavior")
+
+                self.result.result = "Success"
+                self.translate_pub.publish("")
+
+                return self.result
+
+        except Exception as e:
+            rospy.logerr(f"Invalid data:{e}")
+            return
+
+    def action(self,goal):
+        try:
+
+            if not self.running:
+                self.running = True
+                self.stop    = False
+
+            #dictonary        = json.loads(goal.in_dic)
+            source_language  = str(goal.goal) #dictonary["source"]
+            target_language  = str(goal.in_dic)#dictonary["target"]
+
+            return self.generate_translation(source_language,target_language,self.stt_language)
+        
+        except Exception as e:
+            rospy.logerr(f"Empty Goal: {e}")
+            self.result.result = "Failure"
+            self.translate_pub.publish("")
+
+            return self.result
+
+    def preempted(self):
+        pass
+
+    def generate_translation(self,src_language,target_language,language_stt):
+        try:
+            self.translate_pub.publish("translating")
+            self.result.result = "Working"
+
+            if language_stt:
+                if not self.stop:
+                    languages  = [src_language,target_language]
+
+                    if language_stt in languages:
+                        to_lang     = languages.index(language_stt-1)
+                        result_text = self.translator.translate(self.text, src="en", dest=to_lang)
+            
+                    else:
+                        to_lang     = language_stt
+                        result_text = self.translator.translate("Please say it again, I did not understand.", src="en", dest=to_lang)
+            
+                    self.tts_goal.data = result_text
+                    self.tts_goal.lang = to_lang
+
+                    if self.stop:
+                        self.stop    = False
+                        self.running = False
+                        rospy.loginfo("[Translate Conversation    ]:Returning stop")
+                        self.result.result = "Success"
+                        
+                        return self.result
+                
+            else:
+                rospy.loginfo("[Translate Conversation    ]:Waiting for conversation")
+
+            return self.result
+
+        except Exception as e:
+            rospy.logerr(f"No audio detected: {e}")
+            self.result.result = "Working"
+
+            return self.result
+        
+
+if __name__ == "__main__":
+    rospy.init_node("translate_conversation",log_level=rospy.INFO)
+    server = StatusUpdate(rospy.get_name(),TranslateConversation)
+    rospy.spin()

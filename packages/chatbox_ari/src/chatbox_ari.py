@@ -24,6 +24,7 @@ class ChatboxARI:
         self.languages         = {"en":"English","es":"Spanish","de":"German","fr":"French","sv":"Swedish","jp":"Japanese"}
 
         self.ari_speeking      = ""
+        self.ari_translating   = ""
         self.model_ollama      = "mistral:latest"
         self.verbose           = rospy.get_param("/verbose",False)
         self.stt_result        = ""
@@ -62,6 +63,7 @@ class ChatboxARI:
 
         # Subscribers
         #rospy.Subscriber("/humans/voices/anonymous_speaker/speech",LiveSpeech,self.asr_result)
+        rospy.Subscriber("/translate_conversation",String,self.ari_translating_state)
         rospy.Subscriber("/tts/ARI_speeking",String,self.ari_speeking_state)
         rospy.Subscriber("/stt/transcript",String,self.stt)
 
@@ -87,6 +89,9 @@ class ChatboxARI:
         self.tts_client.send_goal_and_wait(goal)
         self.tts_client.wait_for_result()
         rospy.sleep(1.7)
+
+    def ari_speeking_state(self,msg):
+        self.ari_translating = msg.data
 
     def ari_speeking_state(self,msg):
         self.ari_speeking = msg.data
@@ -171,7 +176,7 @@ class ChatboxARI:
     def run_stt(self):
         rospy.loginfo(f"Listen: {self.listen}, Process: {self.ready_to_process}, Stop: {self.stop}, Speeking:{self.ari_speeking}, Data:{self.data_dic}")
 
-        if self.ari_speeking == "speaking" or not self.listen or self.data_dic==None:
+        if self.ari_speeking == "speaking" or not self.listen or self.data_dic==None or self.ari_translating=="translating":
             return
         
         if isinstance(self.data_dic, str):
