@@ -50,6 +50,8 @@ class TranslateConversation:
             self.phrase       = data_dic["translation"]
             self.stt_language = data_dic["language"]
 
+            rospy.loginfo(self.phrase,self,self.stt_language)
+
             if "stop" in (self.phrase).lower() and len(self.phrase.split())<2:
                 self.stop = True
                 rospy.loginfo("[Translate Conversation]:Stoping Translate Conversation behavior")
@@ -91,7 +93,7 @@ class TranslateConversation:
             self.translate_pub.publish("translating")
             self.result.result = "Working"
 
-            if language_stt and phrase:
+            if language_stt != None and phrase != None:
                 if not self.stop:
                     languages  = [src_language,target_language]
 
