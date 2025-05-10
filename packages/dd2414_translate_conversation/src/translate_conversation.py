@@ -102,8 +102,9 @@ class TranslateConversation:
                     else:
                         to_lang     = language_stt
                         result_text = self.translator.translate("Please say it again, I did not understand.", src="en", dest=to_lang)
-            
-                    goal = brain.BrainGoal()
+                    
+                    result_text = result_text.text
+                    goal        = brain.BrainGoal()
                     goal.goal   = ""
                     goal.in_dic = {"language":to_lang,"intent":"translate","phrase":result_text}
 
