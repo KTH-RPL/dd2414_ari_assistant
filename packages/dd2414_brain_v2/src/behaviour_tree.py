@@ -225,10 +225,11 @@ class Brain:
 
         if(self.publishers_dict[intent] and self.intent_dict.get('input')):
             goal = brain.BrainGoal()
-            goal.goal=self.intent_dict['input']
             if intent == "translate":
+                goal.goal=(self.intent_dict['input']).replace("\"","")
                 goal.in_dic = json.dumps(self.intent_dict["language"])
             else:
+                goal.goal=self.intent_dict['input']
                 goal.in_dic = json.dumps(self.intent_dict)
 
 
