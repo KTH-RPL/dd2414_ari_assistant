@@ -48,12 +48,11 @@ class TranslateConversation:
             return
 
         try:
+            rospy.loginfo(msg.data)
             self.data_dic = msg.data
             data_dic      = json.loads(self.data_dic)
             phrase        = data_dic["translation"]
             stt_language  = data_dic["language"]
-            
-            rospy.loginfo(phrase,stt_language)
 
             if "stop" in (phrase).lower() and len(phrase.split())<2:
                 self.stop = True
