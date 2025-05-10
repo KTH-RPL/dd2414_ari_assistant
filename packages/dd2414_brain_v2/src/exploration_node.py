@@ -74,7 +74,7 @@ class ExploreBehaviour(py_trees.behaviour.Behaviour):
         if 12 <= current_hour < 13:
             weights["kitchen"] += 2
 
-        ###################################################### Maybe add dynamic priorities based on local costmap
+        ### Maybe add dynamic priorities based on local costmap
 
 
         # Sort by weight
