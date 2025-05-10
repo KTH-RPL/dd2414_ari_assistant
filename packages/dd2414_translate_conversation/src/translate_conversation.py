@@ -51,8 +51,8 @@ class TranslateConversation:
             self.data_dic = msg.data
             data_dic      = json.loads(self.data_dic)
             phrase        = data_dic["translation"]
-            stt_language  = str(self.languages[(data_dic["language"]).lower()])
-
+            stt_language  = data_dic["language"]
+            
             rospy.loginfo(phrase,stt_language)
 
             if "stop" in (phrase).lower() and len(phrase.split())<2:
