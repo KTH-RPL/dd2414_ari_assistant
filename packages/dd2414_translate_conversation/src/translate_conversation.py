@@ -5,6 +5,7 @@ import dd2414_brain_v2.msg as brain
 import dd2414_text_speech.msg as tts 
 
 from actionlib import SimpleActionClient
+import actionlib
 from googletrans import Translator
 from std_msgs.msg import String
 from dd2414_status_update import StatusUpdate
@@ -17,8 +18,7 @@ class TranslateConversation:
         # Action client of TTS Multilanguages
         #self.ac_ttsm = SimpleActionClient('text_multilanguage_speech', tts.TextToSpeechMultilanguageAction)
         #self.ac_ttsm.wait_for_server()
-        self.ac_ollama_response = rospy.Publisher(f"translate/ollama_response",brain.BrainGoal,queue_size=1)
-
+        self.ac_ollama_response = actionlib.SimpleActionClient("/ollama_response",brain.BrainAction)
         rospy.loginfo("[Translate Conversation]:Initialized")
         self.string_header = "[Translate Conversation]:"
 
@@ -48,20 +48,21 @@ class TranslateConversation:
             return
 
         try:
-            rospy.loginfo(msg.data)
-            self.data_dic = msg.data
-            data_dic      = json.loads(self.data_dic)
-            phrase        = data_dic["translation"]
-            stt_language  = data_dic["language"]
+            if self.ari_speeking != "speaking":
+                rospy.loginfo(msg.data)
+                self.data_dic = msg.data
+                data_dic      = json.loads(self.data_dic)
+                phrase        = data_dic["translation"]
+                stt_language  = data_dic["language"]
 
-            if "stop" in (phrase).lower() and len(phrase.split())<2:
-                self.stop = True
-                rospy.loginfo("[Translate Conversation]:Stoping Translate Conversation behavior")
+                if "stop" in (phrase).lower() and len(phrase.split())<2:
+                    self.stop = True
+                    rospy.loginfo("[Translate Conversation]:Stoping Translate Conversation behavior")
 
-                self.result.result = "Success"
-                self.translate_pub.publish("")
+                    self.result.result = "Success"
+                    self.translate_pub.publish("")
 
-                return self.result
+                    return self.result
 
         except Exception as e:
             rospy.logerr(f"Invalid data:{e}")
@@ -75,13 +76,16 @@ class TranslateConversation:
                 self.stop    = False
 
             #dictonary        = json.loads(goal.in_dic)
-            source_language  = str(goal.goal) #dictonary["source"]
-            target_language  = str(goal.in_dic)#dictonary["target"]
-            
+            target_language  = str(goal.goal).replace("\"","")#dictonary["source"]
+            source_language  = str(goal.in_dic).replace("\"","")#dictonary["target"]
+            rospy.loginfo("######################")
+            rospy.loginfo(self.data_dic) 
+            rospy.loginfo("######################")
             if self.data_dic != None:
                 data_dic     = json.loads(self.data_dic)
                 phrase       = data_dic["translation"]
-                stt_language = self.languages[(data_dic["language"]).lower()]
+                target_language = self.languages[(target_language).lower()]
+                stt_language = data_dic["language"]
 
                 return self.generate_translation(phrase,source_language,target_language,stt_language)
             else:
@@ -107,25 +111,28 @@ class TranslateConversation:
             if language_stt != None and phrase != None:
                 if not self.stop:
                     languages  = [src_language,target_language]
-
+                    rospy.loginfo(languages)
+                    rospy.loginfo(language_stt)
                     if language_stt in languages:
-                        to_lang     = languages.index(language_stt-1)
+                        index = languages.index(language_stt)-1
+                        to_lang     = languages[index]
                         result_text = self.translator.translate(phrase, src="en", dest=to_lang)
-            
+                        result_text = result_text.text
                     else:
-                        to_lang     = language_stt
-                        result_text = self.translator.translate("Please say it again, I did not understand.", src="en", dest=to_lang)
+                        to_lang     = "en"
+                        result_text = "Please say it again, I did not understand." #self.translator.translate("Please say it again, I did not understand.", src="en", dest=to_lang)
                     
-                    result_text = result_text.text
+                    rospy.loginfo(result_text)
                     goal        = brain.BrainGoal()
-                    goal.goal   = ""
+                    goal.goal   = "a"
                     goal.in_dic = {"language":to_lang,"intent":"translate","phrase":result_text}
-
+                    goal.in_dic = json.dumps(goal.in_dic)
                     # Send audio goal
                     rospy.loginfo("[Ollama Response]:Response sent to TTS")
                     #self.ac_ttsm.send_goal_and_wait(self.tts_goal)
                     rospy.loginfo(goal)
-                    self.ac_ollama_response.publish(goal)
+                    self.ac_ollama_response.send_goal_and_wait(goal)
+                    state = self.ac_ollama_response.get_state()
 
                     if self.stop:
                         self.stop    = False
