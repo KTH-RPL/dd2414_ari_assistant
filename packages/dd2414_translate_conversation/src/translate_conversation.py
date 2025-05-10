@@ -30,6 +30,7 @@ class TranslateConversation:
         self.translate_pub = rospy.Publisher("/translate_conversation",String,queue_size=10)
 
         self.text         = None
+        self.data_dic     = None
         self.stop         = False
         self.running      = False
         self.stt_language = "" 
@@ -37,6 +38,7 @@ class TranslateConversation:
         self.translating  = ""
         self.data_dic     = ""
         self.translator   = Translator()
+        self.languages    = {"spanish":"es","english":"en","french":"fr","german":"de"}
 
     def ari_speeking_state(self,msg):
         self.ari_speeking = msg.data
@@ -47,11 +49,11 @@ class TranslateConversation:
 
         try:
             self.data_dic = msg.data
-            data_dic      = json.loads(data_dic)
+            data_dic      = json.loads(self.data_dic)
             phrase        = data_dic["translation"]
-            stt_language  = data_dic["language"]
+            stt_language  = self.languages[(data_dic["language"]).lower()]
 
-            rospy.loginfo(self.phrase,self,self.stt_language)
+            rospy.loginfo(phrase,stt_language)
 
             if "stop" in (self.phrase).lower() and len(self.phrase.split())<2:
                 self.stop = True
@@ -80,7 +82,7 @@ class TranslateConversation:
             if self.data_dic != None:
                 data_dic     = json.loads(self.data_dic)
                 phrase       = data_dic["translation"]
-                stt_language = data_dic["language"]
+                stt_language = self.languages[(data_dic["language"]).lower()]
 
                 return self.generate_translation(phrase,source_language,target_language,stt_language)
             else:
