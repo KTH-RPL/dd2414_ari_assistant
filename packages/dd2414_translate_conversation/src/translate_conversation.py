@@ -100,6 +100,7 @@ class TranslateConversation:
 
     def generate_translation(self,phrase,src_language,target_language,language_stt):
         try:
+            rospy.loginfo("Translating")
             self.translate_pub.publish("translating")
             self.result.result = "Working"
 
