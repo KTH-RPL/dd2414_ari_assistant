@@ -11,12 +11,13 @@ from dd2414_status_update import StatusUpdate
 
 class TranslateConversation:
     def __init__(self):
-        self.result = brain.BrainResult()
-        self.tts_goal = tts.TextToSpeechMultilanguageGoal()
+        self.result   = brain.BrainResult()
+        #self.tts_goal = tts.TextToSpeechMultilanguageGoal()
 
         # Action client of TTS Multilanguages
-        self.ac_ttsm = SimpleActionClient('text_multilanguage_speech', tts.TextToSpeechMultilanguageAction)
-        self.ac_ttsm.wait_for_server()
+        #self.ac_ttsm = SimpleActionClient('text_multilanguage_speech', tts.TextToSpeechMultilanguageAction)
+        #self.ac_ttsm.wait_for_server()
+        self.ac_ollama_response = rospy.Publisher(f"translate/ollama_response",brain.BrainGoal,queue_size=1)
 
         rospy.loginfo("[Translate Conversation]:Initialized")
         self.string_header = "[Translate Conversation]:"
@@ -30,6 +31,7 @@ class TranslateConversation:
 
         self.text         = None
         self.stop         = False
+        self.running      = False
         self.stt_language = "" 
         self.ari_speeking = ""
         self.translating  = ""
@@ -101,8 +103,14 @@ class TranslateConversation:
                         to_lang     = language_stt
                         result_text = self.translator.translate("Please say it again, I did not understand.", src="en", dest=to_lang)
             
-                    self.tts_goal.data = result_text
-                    self.tts_goal.lang = to_lang
+                    goal = brain.BrainGoal()
+                    goal.goal   = ""
+                    goal.in_dic = {"language":to_lang,"intent":"translate","phrase":result_text}
+
+                    # Send audio goal
+                    rospy.loginfo("[Ollama Response]:Response sent to TTS")
+                    #self.ac_ttsm.send_goal_and_wait(self.tts_goal)
+                    self.ac_ollama_response.publish(goal)
 
                     if self.stop:
                         self.stop    = False

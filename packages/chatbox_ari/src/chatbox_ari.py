@@ -90,7 +90,7 @@ class ChatboxARI:
         self.tts_client.wait_for_result()
         rospy.sleep(1.7)
 
-    def ari_speeking_state(self,msg):
+    def ari_translating_state(self,msg):
         self.ari_translating = msg.data
 
     def ari_speeking_state(self,msg):
