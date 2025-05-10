@@ -51,11 +51,11 @@ class TranslateConversation:
             self.data_dic = msg.data
             data_dic      = json.loads(self.data_dic)
             phrase        = data_dic["translation"]
-            stt_language  = self.languages[(data_dic["language"]).lower()]
+            stt_language  = str(self.languages[(data_dic["language"]).lower()])
 
             rospy.loginfo(phrase,stt_language)
 
-            if "stop" in (self.phrase).lower() and len(self.phrase.split())<2:
+            if "stop" in (phrase).lower() and len(phrase.split())<2:
                 self.stop = True
                 rospy.loginfo("[Translate Conversation]:Stoping Translate Conversation behavior")
 
