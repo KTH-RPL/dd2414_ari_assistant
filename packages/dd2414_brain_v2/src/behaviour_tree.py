@@ -34,13 +34,13 @@ class Brain:
 
         self.namespace_dict = {
             "stop"                 :"/stop",
-            #"stop"                 :self.stop,
+            "translate"            :"/translate_conversation",
             "remember user"        :"/face_recognition_node",
             "face recognition"     :"/face_recognition_node",
             "go to"                :"/move_to_poi",
             "find speaker"         :"/find_speaker",
             "follow user"          :"/follow_user",
-            #"translate"            :self.translate,
+            #"move to person"       :"/body_orientation_listener",
             "provide information"  :"/ollama_response",
             #"speech"               :self.text_to_speech,
             "greet"                :"/face_recognition_node",
@@ -100,22 +100,17 @@ class Brain:
         
 
         
-        #greet_behaviour = self.behaviours["face recognition"]
+        translate_behaviour = self.behaviours["translate"]
 
-        #remember_user_behaviour = self.behaviours["face recognition"]
-        
-        #goodbye_behaviour = self.behaviours["face recognition"]
 
-        # Actions in order of priority (higher priority are further up)
         self.action_dict = {
             "stop"                 :StopBehaviour(name="stop behaviour", action_dict=self.namespace_dict),
-            #"stop"                 :self.stop,
+            "translate"            :translate_behaviour,
             "remember user"        :remember_user_behaviour,
             "face recognition"     :self.behaviours["face recognition"],
             "go to"                :go_to_behaviour,
             "find speaker"         :self.behaviours['find speaker'],
             "follow user"          :follow_user_behaviour,
-            #"translate"            :self.translate,
             "provide information"  :self.behaviours['provide information'],
             #"speech"               :self.text_to_speech,
             "greet"                :greet_behaviour,
@@ -231,7 +226,11 @@ class Brain:
         if(self.publishers_dict[intent] and self.intent_dict.get('input')):
             goal = brain.BrainGoal()
             goal.goal=self.intent_dict['input']
-            goal.in_dic = json.dumps(self.intent_dict)
+            if intent == "translate":
+                goal.in_dic = json.dumps(self.intent_dict["language"])
+            else:
+                goal.in_dic = json.dumps(self.intent_dict)
+
 
             self.publishers_dict[intent].publish(goal)
     
