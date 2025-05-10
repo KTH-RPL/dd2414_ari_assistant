@@ -14,7 +14,7 @@ class ExploreBehaviour(py_trees.behaviour.Behaviour):
         rospy.loginfo("[EXPLORE        ]: Initialized")
         self.string_header = "[EXPLORE        ]:"
 
-        self.rooms = ["mo_cap", "kitchen", "Inner_Office", "copy_room"]
+        self.rooms = ["motion_capture_room", "kitchen", "copy_room", "office", ]
 
         self.room_index = 0
         self.client = actionlib.SimpleActionClient("/move_to_poi", brain.BrainAction)
