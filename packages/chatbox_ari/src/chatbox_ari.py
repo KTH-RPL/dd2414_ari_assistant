@@ -21,7 +21,7 @@ class ChatboxARI:
         self.data_dic          = None
         self.string_header     = "[LLM            ]:"
         self.languages         = ["en","es","de","fr","sv"]
-        self.languages         = {"en":"English","es":"Spanish","de":"German","fr":"French","sv":"Swedish"}
+        self.languages         = {"en":"English","es":"Spanish","de":"German","fr":"French","sv":"Swedish","jp":"Japanese"}
 
         self.ari_speeking      = ""
         self.model_ollama      = "mistral:latest"
@@ -187,8 +187,9 @@ class ChatboxARI:
             self.stop = True 
             self.ready_to_process = False
             self.listen = False
-            self.tts_output("Stopping")
             self.publish_intent("stop","","Stopping")
+            self.tts_output("Stopping")
+            
 
         if "start" in (self.stt_result).lower()  or "continue" in (self.stt_result).lower():
             self.tts_output("Listening")
@@ -225,7 +226,7 @@ class ChatboxARI:
         if self.intents[intent_result][1] and ":" in intent_ollama:
             parameter = intent_ollama.split(":")[-1].strip().lower().replace("the ","").replace("\"","").replace(".","")
             aux = parameter.split()
-            if len(aux) > 2:
+            if len(aux) > 3 or "specified" in aux:
                 return "", ""
             
             response  = response + f" Objective: {parameter}"
@@ -238,7 +239,7 @@ class ChatboxARI:
             else:
                 response = user_input
 
-
+        parameter = parameter.lower()
         return parameter, response
 
     def process_user_input(self, user_input):
@@ -258,7 +259,7 @@ class ChatboxARI:
         else:
 
             parameter, response = self.process_intent(intent_ollama, intent_result, user_input)
-            if parameter == "" and response == "" or len(response.split(" ")) > 25:
+            if parameter == "" and response == "" or len(response.split(" ")) > 27:
                 self.reject_message()
                 return 
             

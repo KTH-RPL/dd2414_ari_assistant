@@ -13,7 +13,7 @@ class STT:
     def __init__(self):
         self.rate          = rospy.Rate(1)
         self.string_header = "[STT            ]:"
-        self.languages     = ["en","es","de","fr","sv"]
+        self.languages     = ["en","es","de","fr","sv","jp"]
         self.stt_model     = whisper.load_model("small")
         self.verbose       = rospy.get_param("/verbose",False)
         self.transcript    = {}

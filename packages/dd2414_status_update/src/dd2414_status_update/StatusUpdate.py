@@ -65,6 +65,8 @@ class StatusUpdate(py_trees.behaviour.Behaviour):
                 self._result.result = "Failure"
                 self._as.set_preempted()
                 rospy.loginfo(self.string_header + "Goal Preempted.")
+
+                return 
             else:
  
                 self._feedback.feedback = self._result.result
