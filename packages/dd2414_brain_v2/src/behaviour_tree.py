@@ -38,7 +38,7 @@ class Brain:
             "remember user"        :"/face_recognition_node",
             "face recognition"     :"/face_recognition_node",
             "go to"                :"/move_to_poi",
-            "find speaker"         :"/ari_turn_to_speaker",
+            "find speaker"         :"/find_speaker",
             "follow user"          :"/follow_user",
             #"translate"            :self.translate,
             "provide information"  :"/ollama_response",
@@ -76,16 +76,35 @@ class Brain:
 
         follow_user_behaviour = py_trees.Sequence(
             "Find speaker, then follow user", 
-            [self.behaviours["find speaker"], 
-             stop_look_at_face_behaviour, 
+            [self.behaviours["find speaker"],  
              self.behaviours["follow user"],
              look_at_face_behaviour])
         
-        greet_behaviour = self.behaviours["face recognition"]
-
-        remember_user_behaviour = self.behaviours["face recognition"]
+        greet_behaviour = py_trees.Sequence(
+            "Find speaker, then say hello (with name)", 
+            [self.behaviours["find speaker"], 
+             self.behaviours["face recognition"],
+             look_at_face_behaviour])
         
-        goodbye_behaviour = self.behaviours["face recognition"]
+        remember_user_behaviour = py_trees.Sequence(
+            "Find speaker, then remember their name", 
+            [self.behaviours["find speaker"],  
+             self.behaviours["face recognition"],
+             look_at_face_behaviour])
+        
+        goodbye_behaviour = py_trees.Sequence(
+            "Find speaker, and tell them goodbye (with name)", 
+            [self.behaviours["find speaker"],  
+             self.behaviours["face recognition"],
+             look_at_face_behaviour])
+        
+
+        
+        #greet_behaviour = self.behaviours["face recognition"]
+
+        #remember_user_behaviour = self.behaviours["face recognition"]
+        
+        #goodbye_behaviour = self.behaviours["face recognition"]
 
         # Actions in order of priority (higher priority are further up)
         self.action_dict = {

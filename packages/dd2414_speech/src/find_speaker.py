@@ -19,6 +19,7 @@ class FindSpeakerActionServer:
         self.result.result = ""
 
         self.directions = []
+        self.buffer_duration = rospy.Duration(5.0) # Keep last 5 seconds of data
         self.speaking_in_progress = False
         self.turning_to_speech = False
         self.finding_speaker_active = False
@@ -46,7 +47,7 @@ class FindSpeakerActionServer:
         self.finding_speaker_active = True
         
         if(len(self.directions) > 0):
-            median_direction = np.median(self.directions)
+            median_direction = np.median([d for (_, d) in self.directions])
             self.rotate_to(median_direction)
             self.directions = []
         else:
@@ -158,15 +159,22 @@ class FindSpeakerActionServer:
     # Save directions, active during speech
     def direction_cb(self, data):        
         if(self.speaking_in_progress):
+            now = rospy.Time.now()
             direction = data.data
             if(direction == 180):
                 return
             elif(direction < -90):
-                self.directions.append((-direction) - 180)
+                direction = (-direction) - 180
             elif(direction > 90):
-                self.directions.append((-direction) + 180)
-            else:
-                self.directions.append(direction)
+                direction = (-direction) + 180
+
+            self.directions.append((now, direction))
+
+        # Remove old entries outside buffer window
+        self.directions = [
+            (t, d) for (t, d) in self.directions
+            if now - t <= self.buffer_duration
+        ]
 
 if __name__ == '__main__':
 
