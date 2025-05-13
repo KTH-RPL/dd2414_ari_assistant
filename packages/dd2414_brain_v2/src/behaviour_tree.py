@@ -117,7 +117,7 @@ class Brain:
             #"speech"               :self.text_to_speech,
             "greet"                :greet_behaviour,
             "goodbye"              :goodbye_behaviour,
-            "explore"              :ExploreBehaviour(name = "explore behaviour", action_dict = self.namespace_dict)
+            "explore"              :ExploreBehaviour(name = "explore")
             }      
 
         for action in self.action_dict:

@@ -50,7 +50,7 @@ class TranslateConversation:
 
         try:
             if self.ari_speeking != "speaking" and self.process == True:
-                rospy.loginfo(msg.data)
+                #rospy.loginfo(msg.data)
                 self.data_dic = msg.data
                 data_dic      = json.loads(self.data_dic)
                 phrase        = data_dic["translation"]
@@ -82,9 +82,9 @@ class TranslateConversation:
             target_language  = str(goal.goal).replace("\"","")#dictonary["source"]
             language_dic     = json.loads(goal.in_dic)
             source_language  = str(language_dic["language"]).replace("\"","")#dictonary["target"]
-            rospy.loginfo("######################")
-            rospy.loginfo(self.data_dic) 
-            rospy.loginfo("######################")
+#            rospy.loginfo("######################")
+#            rospy.loginfo(self.data_dic) 
+#            rospy.loginfo("######################")
             if self.data_dic != None:
                 data_dic     = json.loads(self.data_dic)
                 phrase       = data_dic["translation"]
@@ -95,6 +95,7 @@ class TranslateConversation:
             else:
                 self.result.result = "Working"
                 self.translate_pub.publish("translating")
+                return self.result
         
         except Exception as e:
             rospy.logerr(f"Empty Goal: {e}")
