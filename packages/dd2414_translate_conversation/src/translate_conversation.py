@@ -25,7 +25,7 @@ class TranslateConversation:
         # Subscribers
         #rospy.Subscriber("/humans/voices/anonymous_speaker/speech",LiveSpeech,self.asr_result)
         rospy.Subscriber("/tts/ARI_speeking",String,self.ari_speeking_state)
-        rospy.Subscriber("/stt/transcript",String,self.stt)
+        rospy.Subscriber("/stt/transcript",String,self.stt,queue_size=1)
 
         self.translate_pub = rospy.Publisher("/translate_conversation",String,queue_size=10)
 
@@ -49,7 +49,7 @@ class TranslateConversation:
             return
 
         try:
-            if self.ari_speeking != "speaking" and self.process == True:
+            if self.ari_speeking != "speaking" and self.process == True and self.running:
                 #rospy.loginfo(msg.data)
                 self.data_dic = msg.data
                 data_dic      = json.loads(self.data_dic)
@@ -58,6 +58,7 @@ class TranslateConversation:
 
                 if "stop" in (phrase).lower() and len(phrase.split())<2:
                     self.stop = True
+                    self.running = False
                     rospy.loginfo("[Translate Conversation]:Stoping Translate Conversation behavior")
 
                     self.result.result = "Success"
