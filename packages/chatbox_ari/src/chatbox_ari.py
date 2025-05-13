@@ -83,13 +83,13 @@ class ChatboxARI:
 
     def tts_output(self,text):
         if self.ari_translating != "translating":
-            self.listen = False
+            self.listen          = False
             goal                 = TtsGoal()
             goal.rawtext.lang_id = "en_US"
             goal.rawtext.text    = text
             self.tts_client.send_goal_and_wait(goal)
             self.tts_client.wait_for_result()
-            rospy.sleep(1.7)
+            rospy.sleep(1)
 
     def ari_translating_state(self,msg):
         self.ari_translating = msg.data

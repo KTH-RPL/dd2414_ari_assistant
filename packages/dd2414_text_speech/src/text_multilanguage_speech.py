@@ -63,7 +63,7 @@ class TextMultilanguageSpeech:
                 rospy.sleep(1.5)
 
             rospy.loginfo("TTS playback completed.")
-            rospy.sleep(1.2)
+            rospy.sleep(1)
             self.talking = ""
             self._as.set_succeeded()
 

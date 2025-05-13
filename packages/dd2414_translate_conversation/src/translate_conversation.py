@@ -33,6 +33,7 @@ class TranslateConversation:
         self.data_dic     = None
         self.stop         = False
         self.running      = False
+        self.process      = True
         self.stt_language = "" 
         self.ari_speeking = ""
         self.translating  = ""
@@ -48,7 +49,7 @@ class TranslateConversation:
             return
 
         try:
-            if self.ari_speeking != "speaking":
+            if self.ari_speeking != "speaking" and self.process == True:
                 rospy.loginfo(msg.data)
                 self.data_dic = msg.data
                 data_dic      = json.loads(self.data_dic)
@@ -63,6 +64,8 @@ class TranslateConversation:
                     self.translate_pub.publish("")
 
                     return self.result
+            else:
+                self.data_dic = None
 
         except Exception as e:
             rospy.logerr(f"Invalid data:{e}")
@@ -86,7 +89,7 @@ class TranslateConversation:
                 phrase       = data_dic["translation"]
                 target_language = self.languages[(target_language).lower()]
                 stt_language = data_dic["language"]
-
+                self.process = False
                 return self.generate_translation(phrase,source_language,target_language,stt_language)
             else:
                 self.result.result = "Working"
@@ -108,8 +111,9 @@ class TranslateConversation:
             self.translate_pub.publish("translating")
             self.result.result = "Working"
 
-            if language_stt != None and phrase != None:
+            if language_stt != None and phrase != None and self.data_dic != None:
                 if not self.stop:
+                    self.data_dic = None
                     languages  = [src_language,target_language]
                     rospy.loginfo(languages)
                     rospy.loginfo(language_stt)
@@ -145,6 +149,7 @@ class TranslateConversation:
             else:
                 rospy.loginfo("[Translate Conversation    ]:Waiting for conversation")
 
+            self.process = True
             return self.result
 
         except Exception as e:
