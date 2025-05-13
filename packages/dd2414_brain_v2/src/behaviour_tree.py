@@ -7,7 +7,8 @@ from std_msgs.msg import String
 from std_msgs.msg import Bool
 import json
 import time
-from test_behaviour import TestBehaviour
+from stop_behaviour import StopBehaviour
+from exploration_node import ExploreBehaviour
 from rospy.exceptions import ROSException
 import dd2414_brain_v2.msg as brain
 from dd2414_brain_v2.msg import BrainAction 
@@ -24,7 +25,7 @@ class Brain:
 
         rospy.loginfo("Brain Start Initializing")
 
-        self.intent_sub=rospy.Subscriber(rospy.get_param("~IN_intent_topic","~intent"),String, self.intent_cb)
+        self.intent_sub=rospy.Subscriber(rospy.get_param("~IN_intent_topic","~intent"),String, self.intent_cb, queue_size=1)
 
         self.intent_dict = {}
         self.intent = ""
@@ -33,17 +34,19 @@ class Brain:
         self.current_requested_intent = None
 
         self.namespace_dict = {
-            "test"                 :"/test",
-            #"stop"                 :self.stop,
+            "stop"                 :"/stop",
+            "translate"            :"/translate_conversation",
             "remember user"        :"/face_recognition_node",
+            "face recognition"     :"/face_recognition_node",
             "go to"                :"/move_to_poi",
-            "find speaker"         :"/ari_turn_to_speaker",
+            "find speaker"         :"/find_speaker",
             "follow user"          :"/follow_user",
-            #"translate"            :self.translate,
-            #"provide information"  :self.provide_information,
+            #"move to person"       :"/body_orientation_listener",
+            "provide information"  :"/ollama_response",
             #"speech"               :self.text_to_speech,
-            #"greet"                :greet,
-            #"goodbye"              :self.greet
+            "greet"                :"/face_recognition_node",
+            "goodbye"              :"/face_recognition_node",
+            "explore"              :"/explore"
         }
 
 
@@ -75,24 +78,46 @@ class Brain:
 
         follow_user_behaviour = py_trees.Sequence(
             "Find speaker, then follow user", 
-            [self.behaviours["find speaker"], 
-             stop_look_at_face_behaviour, 
+            [self.behaviours["find speaker"],  
              self.behaviours["follow user"],
-             look_at_face_behaviour])           
+             look_at_face_behaviour])
+        
+        greet_behaviour = py_trees.Sequence(
+            "Find speaker, then say hello (with name)", 
+            [self.behaviours["find speaker"], 
+             self.behaviours["face recognition"],
+             look_at_face_behaviour])
+        
+        remember_user_behaviour = py_trees.Sequence(
+            "Find speaker, then remember their name", 
+            [self.behaviours["find speaker"],  
+             self.behaviours["face recognition"],
+             look_at_face_behaviour])
+        
+        goodbye_behaviour = py_trees.Sequence(
+            "Find speaker, and tell them goodbye (with name)", 
+            [self.behaviours["find speaker"],  
+             self.behaviours["face recognition"],
+             look_at_face_behaviour])
+        
 
-        # Actions in order of priority (higher priority are further up)
+        
+        translate_behaviour = self.behaviours["translate"]
+
+
         self.action_dict = {
-            "test"                 :TestBehaviour(name="test behaviour"),
-            #"stop"                 :self.stop,
-            "remember user"        :self.behaviours['remember user'],
+            "stop"                 :StopBehaviour(name="stop behaviour", action_dict=self.namespace_dict),
+            "translate"            :translate_behaviour,
+            "remember user"        :remember_user_behaviour,
+            "face recognition"     :self.behaviours["face recognition"],
             "go to"                :go_to_behaviour,
             "find speaker"         :self.behaviours['find speaker'],
             "follow user"          :follow_user_behaviour,
-            #"translate"            :self.translate,
-            #"provide information"  :self.provide_information,
+            "provide information"  :self.behaviours['provide information'],
             #"speech"               :self.text_to_speech,
-            #"greet"                :greet,
-            #"goodbye"              :self.greet
+            "greet"                :greet_behaviour,
+            "goodbye"              :goodbye_behaviour,
+            "explore"              :ExploreBehaviour(name = "explore behaviour", action_dict = self.namespace_dict)
             }      
 
         for action in self.action_dict:
@@ -105,7 +130,7 @@ class Brain:
         # For every action, set up condition (action requested) and behaviour (action)
         for action in self.action_dict:
 
-            if(not self.service_is_available(self.namespace_dict[action])):
+            if(not self.service_is_available(self.namespace_dict[action]) and not action=="stop" and not action=="explore"):
                 rospy.logwarn(f"Service {self.namespace_dict[action]} not available, skipping {action} behaviour")
                 #root.add_child(py_trees.behaviours.Success(name=f"Mock {action}"))
                 continue
@@ -200,10 +225,16 @@ class Brain:
 
         self.blackboard.set(self.intent, True)
 
+
         if(self.publishers_dict[intent] and self.intent_dict.get('input')):
             goal = brain.BrainGoal()
-            goal.goal=self.intent_dict['input']
-            goal.in_dic = json.dumps(self.intent_dict)
+            if intent == "translate":
+                goal.goal=(self.intent_dict['input']).replace("\"","")
+                goal.in_dic = json.dumps(self.intent_dict["language"])
+            else:
+                goal.goal=self.intent_dict['input']
+                goal.in_dic = json.dumps(self.intent_dict)
+
 
             self.publishers_dict[intent].publish(goal)
     
@@ -235,9 +266,8 @@ class Brain:
 
     def shutdown(self):
         rospy.loginfo("Shutting Down Brain Node")
-        #self.robot.run_action("stop",{})
 
-    def service_is_available(self, name, timeout=2.0):
+    def service_is_available(self, name, timeout=1.0):
         client = actionlib.SimpleActionClient(name, brain.BrainAction)
         return client.wait_for_server(timeout=rospy.Duration(timeout))
 

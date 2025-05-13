@@ -46,27 +46,27 @@ class StatusUpdate(py_trees.behaviour.Behaviour):
         if(goal.goal != ''):
             self.goal = goal
 
-        if(self._action_name != "/ollama_response"):
+        if(self._action_name != "/ollama_response" and not (self._action_name == "/face_recognition_node" and self.goal.goal == "unknown")):
             self.ollama_response_client.send_goal(self.goal)
 
         self.previous_goal = self.goal
 
         while(self._result.result == "Working" and not rospy.is_shutdown()):
-            
+
             #If a new goal has been sent, preempt to cancel current goal
             if(self.previous_goal != self.goal):
                 self.node.preempted()
                 self.previous_goal = self.goal
 
             if self._as.is_preempt_requested():
+
                 #If goal has been canceled perform necessary shutdown behavior
                 self.node.preempted()
                 ##################################################
                 self._result.result = "Failure"
-                self._as.set_preempted()
+                self._as.set_preempted(self._result)
                 rospy.loginfo(self.string_header + "Goal Preempted.")
-
-                return 
+                return
             else:
  
                 self._feedback.feedback = self._result.result
@@ -92,9 +92,3 @@ class StatusUpdate(py_trees.behaviour.Behaviour):
     def input_cb(self, data):
         rospy.loginfo(f"[{self._action_name}]: StatusUpdate received input {data}")
         self.goal = data
-
-    def stop(self):
-        self.node.preempted()
-        self._as.set_preempted()
-        rospy.loginfo(self.string_header + "Action Server " + self._action_name + " Aborted.")
-        self._as.set_aborted(self._result)

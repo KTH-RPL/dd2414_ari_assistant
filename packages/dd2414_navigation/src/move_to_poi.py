@@ -3,8 +3,10 @@
 import rospy
 
 import actionlib
+from actionlib_msgs.msg import GoalID, GoalStatus, GoalStatusArray
 from dd2414_status_update import StatusUpdate
-from pal_composite_navigation_msgs.msg import GoToFloorPOIAction, GoToFloorPOIGoal
+from pal_navigation_msgs.msg import GoToPOIAction, GoToPOIGoal
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from visualization_msgs.msg import InteractiveMarkerInit
 import json
 import os
@@ -16,12 +18,14 @@ class MoveToPOI:
         self.string_header = "[MOVE_TO_POI    ]:"
         rospy.loginfo(self.string_header + "Initializing")
         self.poi_dict = {}
-        self._ac_navigation = actionlib.SimpleActionClient('/composite_navigation',GoToFloorPOIAction)
+        self._ac_navigation = actionlib.SimpleActionClient('/poi_navigation_server/go_to_poi',GoToPOIAction)
+        self.move_client = actionlib.SimpleActionClient('/move_base', MoveBaseAction)
         self._sub_map_poi = rospy.Subscriber('/poi_marker_server/update_full',InteractiveMarkerInit, self.map_poi_conversion)
         self.encodings_file = "/home/pal/deployed_ws/lib/dd2414_human_detection/face_database.json"
 
         self.status = 3
     
+
     def load_known_faces(self):
         if os.path.exists(self.encodings_file):
             with open(self.encodings_file, "r") as f:
@@ -29,11 +33,11 @@ class MoveToPOI:
                     data = json.load(f)
                     rospy.logdebug("[FACERECOGNITION]:Loaded face database successfully.")
                     
-                    data["encodings"] = {key: [np.array(encoding, dtype=np.float64) for encoding in encodings] 
-                                     for key, encodings in data["encodings"].items()}
-                    return data
                 except json.JSONDecodeError as e:
                     rospy.logerr(f"Error decoding JSON: {e}")
+                data["encodings"] = {key: [np.array(encoding, dtype=np.float64) for encoding in encodings] 
+                                    for key, encodings in data["encodings"].items()}
+                return data
         else:
             rospy.logwarn(f"Face database file {self.encodings_file} does not exist.")
         return {"encodings": {}, "ids": [], "names": [], "coordinates": [], "room": []}
@@ -42,8 +46,10 @@ class MoveToPOI:
             
             #If the goal is new we setup and send the goal
             if self.status != 0 and self.status != 1 :
-                meta = GoToFloorPOIGoal()
-                meta.poi = goal #This is assigning the waypoint for the GoToFloorPOI GOal
+                meta = GoToPOIGoal()
+                meta.poi.data = goal #This is assigning the waypoint for the GoToFloorPOI GOal
+
+                self._ac_navigation.wait_for_server(rospy.Duration(10))
                 self._ac_navigation.send_goal(meta)
             
             #We ask for updates of the Action Server
@@ -63,7 +69,7 @@ class MoveToPOI:
 
     def action(self,goal):
         result = brain.BrainResult()
-
+        #rospy.loginfo(self.string_header + "Action Being Called: " + str(goal))
         #If the goal is the same or its a new goal
         #Check if the goal is a POI
         if goal.goal in self.poi_dict:
@@ -85,10 +91,16 @@ class MoveToPOI:
 
         return result
     
+
     def preempted(self):
         rospy.loginfo(self.string_header + "Cancelling All Goals")
+        #Cancel the POI SERVER GOAL, this will cancel one goal in the MOVE BASE action server
+        #But a new one will pop up after detecting the MOVE BASE goal has been preempted
+        #So we need to wait for the 2nd one to pop and then we cancell that goal, in this case we are cancelling all goals
         self._ac_navigation.cancel_all_goals()
-        pass
+        rospy.sleep(rospy.Duration(0.5))
+        self.move_client.cancel_all_goals()
+        return
         
     def get_poi_from_person(self,goal):
         try:
@@ -102,7 +114,7 @@ class MoveToPOI:
     def map_poi_conversion(self,data):
         marker_dict = {marker.name : marker for marker in data.markers}
         self.poi_dict = marker_dict
-        rospy.logdebug(self.string_header + str(list(marker_dict.keys())))
+#        rospy.logdebug(self.string_header + str(list(marker_dict.keys())))
 
         self.known_face = self.load_known_faces() 
 if __name__ == '__main__':
