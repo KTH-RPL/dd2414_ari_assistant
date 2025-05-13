@@ -35,13 +35,13 @@ class Brain:
 
         self.namespace_dict = {
             "stop"                 :"/stop",
-            #"stop"                 :self.stop,
+            "translate"            :"/translate_conversation",
             "remember user"        :"/face_recognition_node",
             "face recognition"     :"/face_recognition_node",
             "go to"                :"/move_to_poi",
-            "find speaker"         :"/ari_turn_to_speaker",
+            "find speaker"         :"/find_speaker",
             "follow user"          :"/follow_user",
-            #"translate"            :self.translate,
+            #"move to person"       :"/body_orientation_listener",
             "provide information"  :"/ollama_response",
             #"speech"               :self.text_to_speech,
             "greet"                :"/face_recognition_node",
@@ -78,40 +78,41 @@ class Brain:
 
         follow_user_behaviour = py_trees.Sequence(
             "Find speaker, then follow user", 
-            [self.behaviours["find speaker"], 
-             stop_look_at_face_behaviour, 
+            [self.behaviours["find speaker"],  
              self.behaviours["follow user"],
              look_at_face_behaviour])
         
-        stop_behaviour = py_trees.Sequence(
-            "Stop actions, look at speaker",
-            [StopBehaviour(name="stop behaviour", action_dict=self.namespace_dict),
-            look_at_face_behaviour]
-        )
+        greet_behaviour = py_trees.Sequence(
+            "Find speaker, then say hello (with name)", 
+            [self.behaviours["find speaker"], 
+             self.behaviours["face recognition"],
+             look_at_face_behaviour])
         
-        greet_behaviour = self.behaviours["face recognition"]
-
-        remember_user_behaviour = self.behaviours["face recognition"]
+        remember_user_behaviour = py_trees.Sequence(
+            "Find speaker, then remember their name", 
+            [self.behaviours["find speaker"],  
+             self.behaviours["face recognition"],
+             look_at_face_behaviour])
         
-        goodbye_behaviour = self.behaviours["face recognition"]
+        goodbye_behaviour = py_trees.Sequence(
+            "Find speaker, and tell them goodbye (with name)", 
+            [self.behaviours["find speaker"],  
+             self.behaviours["face recognition"],
+             look_at_face_behaviour])
+        
 
-        explore_behaviour = py_trees.Sequence(
-            "Talk, explore",
-            [self.behaviours["explore"],
-            ExploreBehaviour(name="Explore the office"),
-            ]
-        )
+        
+        translate_behaviour = self.behaviours["translate"]
 
-        # Actions in order of priority (higher priority are further up)
+
         self.action_dict = {
-            "stop"                 :stop_behaviour,
-            #"stop"                 :self.stop,
+            "stop"                 :StopBehaviour(name="stop behaviour", action_dict=self.namespace_dict),
+            "translate"            :translate_behaviour,
             "remember user"        :remember_user_behaviour,
             "face recognition"     :self.behaviours["face recognition"],
             "go to"                :go_to_behaviour,
             "find speaker"         :self.behaviours['find speaker'],
             "follow user"          :follow_user_behaviour,
-            #"translate"            :self.translate,
             "provide information"  :self.behaviours['provide information'],
             #"speech"               :self.text_to_speech,
             "greet"                :greet_behaviour,
@@ -227,8 +228,13 @@ class Brain:
 
         if(self.publishers_dict[intent] and self.intent_dict.get('input')):
             goal = brain.BrainGoal()
-            goal.goal=self.intent_dict['input']
-            goal.in_dic = json.dumps(self.intent_dict)
+            if intent == "translate":
+                goal.goal=(self.intent_dict['input']).replace("\"","")
+                goal.in_dic = json.dumps(self.intent_dict["language"])
+            else:
+                goal.goal=self.intent_dict['input']
+                goal.in_dic = json.dumps(self.intent_dict)
+
 
             self.publishers_dict[intent].publish(goal)
     
