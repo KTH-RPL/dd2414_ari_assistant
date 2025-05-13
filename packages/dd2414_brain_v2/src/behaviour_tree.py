@@ -46,7 +46,7 @@ class Brain:
             #"speech"               :self.text_to_speech,
             "greet"                :"/face_recognition_node",
             "goodbye"              :"/face_recognition_node",
-            "explore"              :"/ollama_response"
+            "explore"              :"/explore"
         }
 
 
@@ -117,7 +117,7 @@ class Brain:
             #"speech"               :self.text_to_speech,
             "greet"                :greet_behaviour,
             "goodbye"              :goodbye_behaviour,
-            "explore"              :explore_behaviour
+            "explore"              :ExploreBehaviour(name = "explore behaviour", action_dict = self.namespace_dict)
             }      
 
         for action in self.action_dict:
