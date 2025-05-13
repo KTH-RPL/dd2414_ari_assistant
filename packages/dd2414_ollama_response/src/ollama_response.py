@@ -43,6 +43,7 @@ class OllamaResponse:
             self.person_name = msg.data
 
     def action(self,goal):
+        rospy.loginfo(goal)
         try:
             dictonary = json.loads(goal.in_dic)
             language  = dictonary["language"]

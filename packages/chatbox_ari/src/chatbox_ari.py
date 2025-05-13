@@ -177,7 +177,7 @@ class ChatboxARI:
     def run_stt(self):
         rospy.loginfo(f"Listen: {self.listen}, Process: {self.ready_to_process}, Stop: {self.stop}, Speeking:{self.ari_speeking}, Translating:{self.ari_translating}, Data:{self.data_dic}")
 
-        if self.ari_speeking == "speaking" or not self.listen or self.data_dic==None or self.ari_translating=="translating":
+        if self.ari_speeking == "speaking" or not self.listen or self.data_dic==None:
             return
         
         if isinstance(self.data_dic, str):
@@ -196,6 +196,8 @@ class ChatboxARI:
             self.publish_intent("stop","","Stopping")
             self.tts_output("Stopping")
             
+        if self.ari_translating=="translating":
+            return
 
         if "start" in (self.stt_result).lower()  or "continue" in (self.stt_result).lower():
             self.tts_output("Listening")

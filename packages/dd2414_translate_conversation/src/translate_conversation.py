@@ -80,7 +80,8 @@ class TranslateConversation:
 
             #dictonary        = json.loads(goal.in_dic)
             target_language  = str(goal.goal).replace("\"","")#dictonary["source"]
-            source_language  = str(goal.in_dic).replace("\"","")#dictonary["target"]
+            language_dic     = json.loads(goal.in_dic)
+            source_language  = str(language_dic["language"]).replace("\"","")#dictonary["target"]
             rospy.loginfo("######################")
             rospy.loginfo(self.data_dic) 
             rospy.loginfo("######################")
