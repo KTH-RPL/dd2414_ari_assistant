@@ -44,7 +44,7 @@ class Brain:
             "remember user"        :"/face_recognition_node",
             "face recognition"     :"/face_recognition_node",
             "go to"                :"/move_to_poi",
-            "find speaker"         :"/ari_turn_to_speaker",
+            "find speaker"         :"/find_speaker",
             "follow user"          :"/follow_user",
             #"move to person"       :"/body_orientation_listener",
             "provide information"  :"/ollama_response",
@@ -89,7 +89,8 @@ class Brain:
         
         stop_behaviour = py_trees.Sequence(
             "Stop, loko at person",
-            [StopBehaviour(name="stop behaviour", action_dict=self.namespace_dict), look_at_face_behaviour]
+            [StopBehaviour(name="stop behaviour", action_dict=self.namespace_dict), 
+             look_at_face_behaviour]
         )
         
         translate_behaviour = self.behaviours["translate"]
