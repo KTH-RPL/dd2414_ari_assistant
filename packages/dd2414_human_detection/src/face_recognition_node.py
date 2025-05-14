@@ -354,7 +354,6 @@ class FaceRecognitionNode:
                 rospy.logdebug(f"[FACERECOGNITION]:Zone of Interest: {zone_of_interest}")
                 return zone_of_interest
             else:
-                rospy.logwarn("No zones of interest returned.")
                 return None
 
         except rospy.ServiceException as e:
