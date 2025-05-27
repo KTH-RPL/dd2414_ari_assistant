@@ -24,67 +24,6 @@ from pal_interaction_msgs.msg import TtsAction, TtsGoal
 from std_msgs.msg import String
 from ollama import Client
 
-"""
-
-class Listener(object):
-    def __init__(self):
-        self.listener_sub = rospy.Subscriber("/humans/voices/anonymous_speaker/speech",LiveSpeech,self.listener_result)
-        self.tts_client = SimpleActionClient("/tts",TtsAction)
-        self.tts_client.wait_for_server()
-        self.language = "en_US"
-        self.translate = False
-        self.api = Client(
-            host='http://192.168.0.106:11434',
-            headers={'x-some-header': 'some-value'}
-        )
-        self.system_prompt = "Translate a sentence. Return only the translation"
-        rospy.loginfo("Listening...")
-
-    def listener_result(self,msg):
-        sentence = msg.final
-        rospy.loginfo("Understood sentence: " + sentence)
-
-        if (sentence == "begin translation"):
-            ## MOVE CLOSE TO THE USER
-            self.tts_output("Begining translation")
-            self.translate == True
-
-        if self.translate:
-            self.translate_sentence(sentence)
-            self.translate = False
-
-    def tts_output(self,answer):
-        self.tts_client.cancel_goal()
-        goal = TtsGoal()
-        goal.rawtext.lang_id = self.language
-        goal.rawtext.text = str(answer)
-        self.tts_client.send_goal_and_wait(goal)
-
-    def translate_sentence(self,sentence):
-        model_ollama = "mistral:latest" #llama3.2:latest, mistral:latest, deepseek-r1:latest
-        try:
-            completion = self.api.chat(
-                model=model_ollama, 
-                messages=[
-                    {"role": "system", "content": self.system_prompt},
-                    {"role": "user", "content": "Translate the following sentence to Spanish: "+str(sentence)},
-                    ] 
-            )
-            response = completion.message.content
-            rospy.loginfo(f"DeepSeek Response: {response}")
-            self.tts_output(response)
-
-        except Exception as e:
-            rospy.logerr(f"Error generating response: {e}")
-            return "Sorry, I couldn't process your request."
-
-"""
-# Activar comportamiento con "Translate this conversation"
-# Mover hacia el sujeto identificado, el sujeto tiene que dar la instrucción mientras ve a ARI a los ojos
-# Rotar a ARI para que vea a la otra persona
-# Comenzar la traducción diciendo "begin translation"
-# Finalizar comportamiento con "end translation"
-
 
 class BodyOrientationListener:
 
