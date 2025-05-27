@@ -43,16 +43,75 @@ class ChatboxARI:
             "other"              : False      }
         
         self.intents_description  = [
-            "greet: The robot needs to greet the person. The user DOES NOT provided his/her name when greeting the robot", 
+            "greet: The robot needs to greet the person. This action is detonated when the user greets and DOES NOT provided his/her name in the sentence", 
             "remember user: The robot needs to remember the name of the person that is taliking. This happens ONLY when the person introduce itself to the robot by saying his/her own name, that is the main difference against the action \"greet\", as an example the user might say: hello my name is David, hi I'm Joshua, etc."
             "goodbye: The robot needs to say goodbye to the person",
-            "provide information: The robot needs to answer a question or explain a topic given by the user, do not confuse this with \"greet\" ",
+            "provide information: The robot needs to answer a question or explain a topic asked by the user",
             "go to: The robot needs to move to an specific place. This action can be detonated by asking or demaning, examples: \"Go to the kitchen\", \"Go to the corner\", \"Move 5 meters\" ",
             "follow user: The robot needs to continuously following a person and not just \"go to\" towards them, \"come with me\" is an example of the user asking the robot to folow user", 
             "find object: The robot have to start moving around, in order to find the object or person asked. This action can be detonated by asking things like \"Where is the red ball?\" or demaning a search like \"Find a chair\", \"Where is David?\", \"Find Laura\" ", 
             "explore: The has to start moving around to create a map of the place, this action can be detonated by saying things like: \"start exploring\", \"create a map\" ", 
             "translate: The robot has to help the user to translate sentences or a conversation", 
             "other: If any of the other actions does not fit, the robot has to classify it as other"]
+
+        self.intents_des = [
+        {
+            "name": "greet",
+            "description": "The user greets the robot without mentioning their name.",
+            "examples": ["Hi", "Hello there", "Good morning", "Hey"],
+            "note": "If the user includes their name, classify as 'remember user' instead."
+        },
+        {
+            "name": "remember user",
+            "description": "The user introduces themselves by saying their name.",
+            "examples": ["Hi, my name is David", "I'm Sarah", "Hello, I am Joshua"],
+            "note": "Must contain user's name. Distinct from a simple 'greet'."
+        },
+        {
+            "name": "goodbye",
+            "description": "The user ends the interaction by saying goodbye.",
+            "examples": ["Bye", "Goodbye", "See you later", "Catch you later"]
+        },
+        {
+            "name": "provide information",
+            "description": "The user asks a question or requests an explanation about a topic.",
+            "examples": ["What is photosynthesis?", "Can you explain how a battery works?", "Tell me about the weather"]
+        },
+        {
+            "name": "go to",
+            "description": "The user instructs the robot to move to a specific location or direction.",
+            "examples": ["Go to the kitchen", "Move forward 3 meters", "Go to the door", "Head to the living room", "Go to Laura", "Go to David"]
+        },
+        {
+            "name": "follow user",
+            "description": "The user asks the robot to follow them continuously, not just go to a location.",
+            "examples": ["Follow me", "Come with me", "Stay with me"],
+            "note": "Involves continuous movement with the user, unlike 'go to'."
+        },
+        {
+            "name": "find object",
+            "description": "The user asks the robot to locate a specific object or person.",
+            "examples": ["Where is the red ball?", "Find Laura", "Search for a chair", "Where is David?"],
+            "note": "Triggers search behavior to find something or someone."
+        },
+        {
+            "name": "explore",
+            "description": "The user instructs the robot to explore the environment and map the area.",
+            "examples": ["Start exploring", "Create a map", "Explore the house", "Scan the environment"]
+        },
+        {
+            "name": "translate",
+            "description": "The user asks the robot to translate words, phrases, or conversations.",
+            "examples": ["Translate this to Spanish", "How do you say apple in French?", "Can you translate this sentence?"]
+        },
+        {
+            "name": "other",
+            "description": "The request does not fit any defined intent categories.",
+            "examples": ["Tell me a joke", "What's your favorite color?", "Sing a song"],
+            "note": "Fallback for out-of-scope or unclear requests."
+        }]
+        
+        self.intent_json = json.dumps(self.intents_des, indent=2)
         
         #self.api          = Client(host="http://130.229.183.186:11434")
         self.api          = Client(host="http://localhost:11434")
@@ -89,7 +148,7 @@ class ChatboxARI:
             goal.rawtext.text    = text
             self.tts_client.send_goal_and_wait(goal)
             self.tts_client.wait_for_result()
-            rospy.sleep(1)
+            rospy.sleep(1.7)
 
     def ari_translating_state(self,msg):
         self.ari_translating = msg.data
@@ -109,7 +168,23 @@ class ChatboxARI:
                "Additionally If the intent is \"go to\" return \"go to:specified_place\", if it is \"translate\" return \"translate to:specified_language\"", 
                " if it is \"find object\" return \"find object:object_to_find\"",
                " if it is \"remember user\" return \"remember user:user_name\""]
-        msg = ' '.join(msg)
+        #msg = [f"Based on the following intent schema, classify the user's message into one of the intent names. Intent schema: {self.intent_json} User input: {user_input} What action did the user expect from the robot? RETURN ONLY the option that best matches. Additionally If the intent is \"go to\" return \"go to:specified_objective\", if it is \"translate\" return \"translate to:specified_language\", if it is \"find object\" return \"find object:object_to_find\", if it is \"remember user\" return \"remember user:user_name\""]
+
+        msg = f"""
+        You are a classifier that determines both the intent and key details (parameters) from a user's message. 
+        Based on the following intent schema, classify the user's input and extract the relevant parameter if applicable.
+        Intent schema: {self.intent_json}
+        Instructions:
+        - For intent "go to", return in the format: go to:specified_place
+        - For intent "translate", return in the format: translate to:specified_language
+        - For intent "find object", return in the format: find object:object_to_find
+        - For intent "remember user", return in the format: remember user:user_name
+        - For all other intents, return just the intent name
+        User input: "{user_input}"
+        Respond with only one line in the correct format.
+        """
+        #msg = ' '.join(msg)
+
         return msg
 
     def ask_ollama(self, msg, promt=""):
@@ -177,7 +252,7 @@ class ChatboxARI:
     def run_stt(self):
         rospy.loginfo(f"Listen: {self.listen}, Process: {self.ready_to_process}, Stop: {self.stop}, Speeking:{self.ari_speeking}, Translating:{self.ari_translating}, Data:{self.data_dic}")
 
-        if self.ari_speeking == "speaking" or not self.listen or self.data_dic==None:
+        if self.ari_speeking == "speaking" or not self.listen or self.data_dic==None: #or self.ari_translating=="translating":
             return
         
         if isinstance(self.data_dic, str):
@@ -186,24 +261,26 @@ class ChatboxARI:
         self.listen= False
         self.ready_to_process = True
 
-        self.stt_result   = self.data_dic["translation"]
+        self.stt_result   = self.data_dic["translation"].replace(".","")
         self.stt_language = self.data_dic["language"]
+        a = len(self.stt_result.split())
+        rospy.loginfo(f"{self.stt_result},{a}")
 
-        if "stop" in (self.stt_result).lower():
+        if "stop" in (self.stt_result).lower() and len(self.stt_result.split())<2:
             self.stop = True 
             self.ready_to_process = False
             self.listen = False
             self.publish_intent("stop","","Stopping")
             self.tts_output("Stopping")
-            
-        if self.ari_translating=="translating":
-            return
 
-        if "start" in (self.stt_result).lower()  or "continue" in (self.stt_result).lower():
+        if "start" in (self.stt_result).lower()  or "continue" in ((self.stt_result).lower()).split() and len(self.stt_result.split(" "))<2:
             self.tts_output("Listening")
             self.stop = False
             self.listen = True
             self.ready_to_process = False
+
+        if self.ari_translating=="translating":
+            return
 
         if self.stop:
             self.listen = True
@@ -234,6 +311,8 @@ class ChatboxARI:
         if self.intents[intent_result][1] and ":" in intent_ollama:
             parameter = intent_ollama.split(":")[-1].strip().lower().replace("the ","").replace("\"","").replace(".","")
             aux = parameter.split()
+            #rospy.loginfo(aux)
+            #rospy.loginfo(len(aux))
             if len(aux) > 3 or "specified" in aux:
                 return "", ""
             
@@ -241,7 +320,7 @@ class ChatboxARI:
 
         if not self.intents[intent_result][0]:
             if intent_result == "provide information" or intent_result == "remember user":
-                response = self.ask_ollama(f"{user_input}. Answer in a short phrase and JUST in {self.languages[self.stt_language]} language, do not include the translation in english")
+                response = self.ask_ollama(f"{user_input}. Answer in a short phrase, less than 27 words and JUST in {self.languages[self.stt_language]} language, do not include the translation in english")
                 #if self.stt_language != 'en':
                 #    response = GoogleTranslator(source='en', target=self.stt_language).translate(response)
             else:
@@ -267,6 +346,7 @@ class ChatboxARI:
         else:
 
             parameter, response = self.process_intent(intent_ollama, intent_result, user_input)
+            rospy.loginfo(len(response.split(" ")))
             if parameter == "" and response == "" or len(response.split(" ")) > 27:
                 self.reject_message()
                 return 
