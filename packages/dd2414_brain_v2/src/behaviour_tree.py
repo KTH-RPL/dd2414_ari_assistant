@@ -302,7 +302,7 @@ class Brain:
             "Find speaker, then move next to them and translate", 
             [stop_look_at_face_behaviour,
              #find_speaker_behaviour, 
-             #move_to_translate_behaviour,
+             move_to_translate_behaviour,
              translate_behaviour])
                 
 

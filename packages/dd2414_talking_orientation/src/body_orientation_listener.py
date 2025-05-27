@@ -74,6 +74,14 @@ class BodyOrientationListener:
         #Procedure in case the call gets cancelled
         pass
 
+    def normalize_quaternion(self, q):
+        norm = np.linalg.norm(q)
+        if norm == 0:
+            rospy.logwarn("[BODYORIENTATION]: Quaternion has zero length, using default identity quaternion.")
+            return [0.0, 0.0, 0.0, 1.0]  # Identity quaternion
+        return [x / norm for x in q]
+
+
     def run(self):
         result_brain = brain.BrainResult()
         while not rospy.is_shutdown():
@@ -99,7 +107,11 @@ class BodyOrientationListener:
                 
                 try:
                     (left_trans, left_rot) = self._tf_Listener.lookupTransform("map","left_"+body[0],rospy.Time(0))
+                    left_rot = self.normalize_quaternion(left_rot) # Normalize
+                    
                     (right_trans, right_rot) = self._tf_Listener.lookupTransform("map","right_"+body[0],rospy.Time(0))
+                    right_rot = self.normalize_quaternion(right_rot)
+
                     transform_valid = True
                 except (LookupException, ConnectivityException, ExtrapolationException) as e:
                     rospy.logdebug(e)
@@ -158,5 +170,5 @@ class BodyOrientationListener:
 
 
 if __name__=="__main__":
-    rospy.init_node("body_orientation_listener",log_level=rospy.INFO)
+    rospy.init_node("body_orientation_listener",log_level=rospy.DEBUG)
     server = StatusUpdate(rospy.get_name(),BodyOrientationListener)
