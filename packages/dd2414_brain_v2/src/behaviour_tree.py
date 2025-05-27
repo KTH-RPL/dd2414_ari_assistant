@@ -51,7 +51,8 @@ class Brain:
             #"speech"               :self.text_to_speech,
             "greet"                :"/face_recognition_node",
             "goodbye"              :"/face_recognition_node",
-            "explore"              :"/explore"
+            "explore"              :"/explore",
+            "reject"               :"/ollama_response"
         }
 
 
@@ -83,10 +84,11 @@ class Brain:
 
         follow_user_behaviour = py_trees.Sequence(
             "Find speaker, then follow user", 
-            [stop_look_at_face_behaviour,
-                self.behaviours["find speaker"],  
-             self.behaviours["follow user"],
-             look_at_face_behaviour])
+            #[stop_look_at_face_behaviour,
+            [self.behaviours["find speaker"],  
+             self.behaviours["follow user"]]
+             #look_at_face_behaviour]
+             )
         
         stop_behaviour = py_trees.Sequence(
             "Stop, loko at person",
@@ -108,7 +110,8 @@ class Brain:
             #"speech"               :self.text_to_speech,
             "greet"                :self.setup_greet_behaviour(),
             "goodbye"              :self.setup_greet_behaviour(),
-            "explore"              :ExploreBehaviour(name = "explore")
+            "explore"              :ExploreBehaviour(name = "explore"),
+            "reject"               :self.behaviours['reject']
             }      
 
         for action in self.action_dict:
