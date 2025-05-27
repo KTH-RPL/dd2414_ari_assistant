@@ -22,7 +22,7 @@ class MoveToPOI:
         self.move_client = actionlib.SimpleActionClient('/move_base', MoveBaseAction)
         self._sub_map_poi = rospy.Subscriber('/poi_marker_server/update_full',InteractiveMarkerInit, self.map_poi_conversion)
         self.encodings_file = "/home/pal/deployed_ws/lib/dd2414_human_detection/face_database.json"
-
+        self.current_room = ""
         self.status = 3
     
 
@@ -33,13 +33,14 @@ class MoveToPOI:
                     data = json.load(f)
                     rospy.logdebug("[FACERECOGNITION]:Loaded face database successfully.")
                     
+                    data["encodings"] = {key: [np.array(encoding, dtype=np.float64) for encoding in encodings] 
+                                        for key, encodings in data["encodings"].items()}
+                    return data
                 except json.JSONDecodeError as e:
                     rospy.logerr(f"Error decoding JSON: {e}")
-                data["encodings"] = {key: [np.array(encoding, dtype=np.float64) for encoding in encodings] 
-                                    for key, encodings in data["encodings"].items()}
-                return data
         else:
             rospy.logwarn(f"Face database file {self.encodings_file} does not exist.")
+
         return {"encodings": {}, "ids": [], "names": [], "coordinates": [], "room": []}
 
     def go_to_poi(self,goal):
@@ -77,12 +78,19 @@ class MoveToPOI:
         #If the goal is not a POI but a Person
         else:
             room = self.get_poi_from_person(goal.goal)
+            if self.current_room != room: #Room the person is has been changed
+                rospy.loginfo(self.string_header + "The persons location has been updated")
+                self._ac_navigation.cancel_all_goals()
+                self.status = None
+            self.current_room = room
+
 
             #If there is a registered room to the person
             if room is not None and room != "" :
+                rospy.logdebug(f"Going to Person in {room}")
                 result.result= self.go_to_poi(room)
             else:
-                if room == "":
+                if room == None:
                     rospy.loginfo(self.string_header + "Person is not registered to any room: " + goal.goal)
                 else:
                     rospy.loginfo(self.string_header + "Waypoint not found: " + goal.goal)
@@ -109,7 +117,8 @@ class MoveToPOI:
             return None
 
         # Obtain name
-        return self.known_face["room"][index]
+        room =self.known_face["room"][index]
+        return room 
 
     def map_poi_conversion(self,data):
         marker_dict = {marker.name : marker for marker in data.markers}
