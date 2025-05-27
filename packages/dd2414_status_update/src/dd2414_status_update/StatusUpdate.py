@@ -46,7 +46,9 @@ class StatusUpdate(py_trees.behaviour.Behaviour):
         if(goal.goal != ''):
             self.goal = goal
 
-        if(self._action_name != "/ollama_response" and not (self._action_name == "/face_recognition_node" and self.goal.goal == "unknown")):
+        if(self._action_name != "/ollama_response" 
+           and not (self._action_name == "/face_recognition_node" and self.goal.goal == "unknown")
+           and self._action_name != "/find_speaker"):
             self.ollama_response_client.send_goal(self.goal)
 
         self.previous_goal = self.goal

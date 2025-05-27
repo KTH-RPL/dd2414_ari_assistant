@@ -2,11 +2,16 @@
 
 
 import operator
+import os
 import rospy
 from std_msgs.msg import String
 from std_msgs.msg import Bool
 import json
 import time
+import cv2
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge
+from py_trees.display import render_dot_tree
 from stop_behaviour import StopBehaviour
 from exploration_node import ExploreBehaviour
 from rospy.exceptions import ROSException
@@ -78,45 +83,31 @@ class Brain:
 
         follow_user_behaviour = py_trees.Sequence(
             "Find speaker, then follow user", 
-            [self.behaviours["find speaker"],  
+            [stop_look_at_face_behaviour,
+                self.behaviours["find speaker"],  
              self.behaviours["follow user"],
              look_at_face_behaviour])
         
-        greet_behaviour = py_trees.Sequence(
-            "Find speaker, then say hello (with name)", 
-            [self.behaviours["find speaker"], 
-             self.behaviours["face recognition"],
-             look_at_face_behaviour])
-        
-        remember_user_behaviour = py_trees.Sequence(
-            "Find speaker, then remember their name", 
-            [self.behaviours["find speaker"],  
-             self.behaviours["face recognition"],
-             look_at_face_behaviour])
-        
-        goodbye_behaviour = py_trees.Sequence(
-            "Find speaker, and tell them goodbye (with name)", 
-            [self.behaviours["find speaker"],  
-             self.behaviours["face recognition"],
-             look_at_face_behaviour])
-        
-
+        stop_behaviour = py_trees.Sequence(
+            "Stop, loko at person",
+            [StopBehaviour(name="stop behaviour", action_dict=self.namespace_dict), 
+             look_at_face_behaviour]
+        )
         
         translate_behaviour = self.behaviours["translate"]
 
-
         self.action_dict = {
-            "stop"                 :StopBehaviour(name="stop behaviour", action_dict=self.namespace_dict),
+            "stop"                 :stop_behaviour,
             "translate"            :translate_behaviour,
-            "remember user"        :remember_user_behaviour,
-            "face recognition"     :self.behaviours["face recognition"],
+            "remember user"        :self.setup_greet_behaviour(),
+            #"face recognition"     :self.behaviours["face recognition"],
             "go to"                :go_to_behaviour,
-            "find speaker"         :self.behaviours['find speaker'],
+            #"find speaker"         :self.behaviours['find speaker'],
             "follow user"          :follow_user_behaviour,
             "provide information"  :self.behaviours['provide information'],
             #"speech"               :self.text_to_speech,
-            "greet"                :greet_behaviour,
-            "goodbye"              :goodbye_behaviour,
+            "greet"                :self.setup_greet_behaviour(),
+            "goodbye"              :self.setup_greet_behaviour(),
             "explore"              :ExploreBehaviour(name = "explore")
             }      
 
@@ -228,12 +219,8 @@ class Brain:
 
         if(self.publishers_dict[intent] and self.intent_dict.get('input')):
             goal = brain.BrainGoal()
-            if intent == "translate":
-                goal.goal=(self.intent_dict['input']).replace("\"","")
-                goal.in_dic = json.dumps(self.intent_dict["language"])
-            else:
-                goal.goal=self.intent_dict['input']
-                goal.in_dic = json.dumps(self.intent_dict)
+            goal.goal=self.intent_dict['input']
+            goal.in_dic = json.dumps(self.intent_dict)
 
 
             self.publishers_dict[intent].publish(goal)
@@ -260,6 +247,33 @@ class Brain:
             look_at_face_behaviour = py_trees.behaviours.Success(name="Mock look at face")
             stop_look_at_face_behaviour = py_trees.behaviours.Success(name="Mock stop look at face")
             return [look_at_face_behaviour, stop_look_at_face_behaviour]
+        
+    def setup_greet_behaviour(self):
+        [look_at_face_behaviour, stop_look_at_face_behaviour] = self.setup_look_at_face()
+
+        
+        find_speaker = "find speaker"
+        find_speaker_behaviour = py_trees_ros.actions.ActionClient(
+                    name=find_speaker,
+                    action_namespace=self.namespace_dict[find_speaker],
+                    action_spec=brain.BrainAction,
+                    action_goal=brain.BrainGoal())
+        
+        face_recognition = "face recognition"
+        face_recognition_behaviour = py_trees_ros.actions.ActionClient(
+                    name=face_recognition,
+                    action_namespace=self.namespace_dict[face_recognition],
+                    action_spec=brain.BrainAction,
+                    action_goal=brain.BrainGoal())
+
+        return py_trees.Sequence(
+            "Find speaker, then say hello (with name)", 
+            [stop_look_at_face_behaviour,
+             find_speaker_behaviour, 
+             face_recognition_behaviour,
+             look_at_face_behaviour])
+
+
 
     def action_requested(self, action):
         return self.current_requested_intent == action
