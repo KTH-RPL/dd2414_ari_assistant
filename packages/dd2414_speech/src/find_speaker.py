@@ -157,9 +157,10 @@ class FindSpeakerActionServer:
             self.speaking_in_progress = False
     
     # Save directions, active during speech
-    def direction_cb(self, data):        
+    def direction_cb(self, data):
+        now = rospy.Time.now()
+
         if(self.speaking_in_progress):
-            now = rospy.Time.now()
             direction = data.data
             if(direction == 180):
                 return
