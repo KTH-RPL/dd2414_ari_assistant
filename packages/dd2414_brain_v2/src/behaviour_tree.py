@@ -41,6 +41,7 @@ class Brain:
         self.namespace_dict = {
             "stop"                 :"/stop",
             "translate"            :"/translate_conversation",
+            "move to translate"    :"/body_orientation_listener",
             "remember user"        :"/face_recognition_node",
             "face recognition"     :"/face_recognition_node",
             "go to"                :"/move_to_poi",
@@ -89,16 +90,15 @@ class Brain:
              look_at_face_behaviour])
         
         stop_behaviour = py_trees.Sequence(
-            "Stop, loko at person",
+            "Stop, look at person",
             [StopBehaviour(name="stop behaviour", action_dict=self.namespace_dict), 
              look_at_face_behaviour]
         )
-        
-        translate_behaviour = self.behaviours["translate"]
+
 
         self.action_dict = {
             "stop"                 :stop_behaviour,
-            "translate"            :translate_behaviour,
+            "translate"            :self.setup_translate_behaviour(),
             "remember user"        :self.setup_greet_behaviour(),
             #"face recognition"     :self.behaviours["face recognition"],
             "go to"                :go_to_behaviour,
@@ -272,6 +272,40 @@ class Brain:
              find_speaker_behaviour, 
              face_recognition_behaviour,
              look_at_face_behaviour])
+    
+    # Move to translate not working
+    def setup_translate_behaviour(self):
+        [look_at_face_behaviour, stop_look_at_face_behaviour] = self.setup_look_at_face()
+
+        find_speaker = "find speaker"
+        find_speaker_behaviour = py_trees_ros.actions.ActionClient(
+                    name=find_speaker,
+                    action_namespace=self.namespace_dict[find_speaker],
+                    action_spec=brain.BrainAction,
+                    action_goal=brain.BrainGoal())
+        
+        move_to_translate = "move to translate"
+        move_to_translate_behaviour = py_trees_ros.actions.ActionClient(
+                    name=move_to_translate,
+                    action_namespace=self.namespace_dict[move_to_translate],
+                    action_spec=brain.BrainAction,
+                    action_goal=brain.BrainGoal())
+        
+        translate = "translate"
+        translate_behaviour = py_trees_ros.actions.ActionClient(
+                    name=translate,
+                    action_namespace=self.namespace_dict[translate],
+                    action_spec=brain.BrainAction,
+                    action_goal=brain.BrainGoal())
+        
+        return py_trees.Sequence(
+            "Find speaker, then move next to them and translate", 
+            [stop_look_at_face_behaviour,
+             #find_speaker_behaviour, 
+             #move_to_translate_behaviour,
+             translate_behaviour])
+                
+
 
 
 
