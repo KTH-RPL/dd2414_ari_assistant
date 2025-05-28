@@ -135,8 +135,9 @@ class Brain:
             condition = py_trees.blackboard.CheckBlackboardVariable(
                 name=f"{action} action not requested?",
                 variable_name=action,
-                expected_value=False,
+                expected_value=False
             )
+            condition.visibility_level = py_trees.common.VisibilityLevel.DETAIL 
 
             reset_fail_counter = py_trees.blackboard.SetBlackboardVariable(
                 name="Set fail counter back to 0",
@@ -202,6 +203,8 @@ class Brain:
 
         look_at_face_behaviour.tick_once()
         rospy.loginfo("Brain Finished Initializing")
+        level = py_trees.common.VisibilityLevel.BIG_PICTURE
+        tree = render_dot_tree(self.behaviour_tree.root, visibility_level=level)
 
     def print_tree(self, tree: py_trees.trees.BehaviourTree) -> None:
         # Print the behaviour tree and its current status.
@@ -305,7 +308,7 @@ class Brain:
             "Find speaker, then move next to them and translate", 
             [stop_look_at_face_behaviour,
              #find_speaker_behaviour, 
-             move_to_translate_behaviour,
+             #move_to_translate_behaviour,
              translate_behaviour])
                 
 
