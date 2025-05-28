@@ -16,10 +16,9 @@ class STT:
         self.languages     = ["en","es","de","fr","sv","jp"]
         self.stt_model     = whisper.load_model("small")
         self.verbose       = rospy.get_param("/verbose",False)
-        self.transcript    = {}
         self.msg_data      = ""
         self.translator    = Translator()
-
+        self.speaking      = False
         # Audio parameters – adjust according to your setup
         #self.stt_listen   = False
         self.stt_filename = f"/tmp/ARI_stt.wav"
@@ -32,23 +31,31 @@ class STT:
         # Publishers
         self.stt_pub = rospy.Publisher("/stt/transcript",String,queue_size=10)
 
+        self.speaking_sub = rospy.Subscriber("/tts/ARI_speeking",String,self.speaking_cb)
+
         # Subscribers
         rospy.Subscriber("/audio/speech", AudioData, self.stt_audio, queue_size=1)
         
         rospy.sleep(3) 
         rospy.loginfo("[STT            ]:Initialized")
 
+    def speaking_cb(self,msg):
+        if "speaking" in msg.data:
+            self.speaking = True
+        else:
+            self.speaking = False
+
     def stt_audio(self,msg):
         if not msg.data:
             self.msg_data = None
             return
         
-        elif msg.data != None:
+        elif msg.data != None and not self.speaking:
             self.msg_data = msg.data
             self.process_audio(self.msg_data)
 
     def process_audio(self,msg_data):
-
+        transcript = {}
         with wave.open(self.stt_filename, 'w') as wf:
             wf.setnchannels(self.CHANNELS)
             wf.setsampwidth(self.SAMPLE_WIDTH)
@@ -68,11 +75,10 @@ class STT:
             else:
                 result_translated = stt_result
 
-            self.transcript["text"]        = str(stt_result)
-            self.transcript["translation"] = str(result_translated)
-            self.transcript["language"]    = str(stt_language)
-
-            self.stt_pub.publish(json.dumps(self.transcript))
+            transcript["text"]        = str(stt_result)
+            transcript["translation"] = str(result_translated)
+            transcript["language"]    = str(stt_language)
+            self.stt_pub.publish(json.dumps(transcript))
             rospy.loginfo(f"[STT            ]:Text:{stt_result}, Translation:{result_translated}, Language:{stt_language}")
         except:
             rospy.logwarn("No Audio Detected")
