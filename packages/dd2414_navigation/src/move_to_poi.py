@@ -6,7 +6,7 @@ import actionlib
 from actionlib_msgs.msg import GoalID, GoalStatus, GoalStatusArray
 from dd2414_status_update import StatusUpdate
 from pal_navigation_msgs.msg import GoToPOIAction, GoToPOIGoal
-from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from move_base_msgs.msg import MoveBaseActionGoal, MoveBaseAction
 from visualization_msgs.msg import InteractiveMarkerInit
 import json
 import os
@@ -18,14 +18,31 @@ class MoveToPOI:
         self.string_header = "[MOVE_TO_POI    ]:"
         rospy.loginfo(self.string_header + "Initializing")
         self.poi_dict = {}
+        self.goal_id = ""
         self._ac_navigation = actionlib.SimpleActionClient('/poi_navigation_server/go_to_poi',GoToPOIAction)
         self.move_client = actionlib.SimpleActionClient('/move_base', MoveBaseAction)
+        self.move_goal = rospy.Subscriber('/move_base/goal', MoveBaseActionGoal, self.move_cb)
+        self.move_status = rospy.Subscriber('/move_base/status',GoalStatusArray, self.status_cb)
         self._sub_map_poi = rospy.Subscriber('/poi_marker_server/update_full',InteractiveMarkerInit, self.map_poi_conversion)
         self.encodings_file = "/home/pal/deployed_ws/lib/dd2414_human_detection/face_database.json"
         self.current_room = ""
         self.status = 3
+        
     
+    def move_cb(self,msg):
 
+        self.goal_id = msg.goal_id.id
+        rospy.loginfo(f"GOAL ID: {self.goal_id}")
+        return
+    
+    def status_cb(self,msg):
+        for status_obj in msg.status_list:
+
+            if self.goal_id == status_obj.goal_id.id:
+                self.move_client_status = status_obj.status
+                rospy.loginfo(f"ID: {self.goal_id} Status: {self.move_client_status}")
+        return
+    
     def load_known_faces(self):
         if os.path.exists(self.encodings_file):
             with open(self.encodings_file, "r") as f:
@@ -52,20 +69,26 @@ class MoveToPOI:
 
                 self._ac_navigation.wait_for_server(rospy.Duration(10))
                 self._ac_navigation.send_goal(meta)
+                #self.goal_id = self.goal_id_recieved
+
             
             #We ask for updates of the Action Server
             status = self._ac_navigation.get_state()
             self.status = status
             result = self._ac_navigation.get_result()
+
             
             rospy.logdebug(self.string_header + str(status))
             rospy.logdebug(self.string_header + str(result))
 
             if status == 3:
+                self.goal_id = ""
                 return "Success"
-            elif status == 0 or status == 1:
+
+            elif status == 0  or status == 1:
                 return "Working"
             else:
+                self.goal_id = ""
                 return "Failure"
 
     def action(self,goal):

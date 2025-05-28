@@ -14,7 +14,7 @@ class ExploreBehaviour(py_trees.behaviour.Behaviour):
         rospy.loginfo("[EXPLORE        ]: Initialized")
         self.string_header = "[EXPLORE        ]:"
 
-        self.rooms = ["motion_capture_room", "kitchen", "copy_room", "office", ]
+        self.rooms = ["kitchen", "copy_room", "office"]
 
         self.room_index = 0
         self.client = actionlib.SimpleActionClient("/move_to_poi", brain.BrainAction)
@@ -43,14 +43,18 @@ class ExploreBehaviour(py_trees.behaviour.Behaviour):
             self.client.send_goal(goal)
             self.sent_goal = True
             rospy.loginfo(f"{self.string_header} Going to {current_room}")
+            self.starting_time = rospy.Time.now()
 
         state = self.client.get_state()
+        rospy.logdebug(f"The state of the Go To Service is: {state}")
+        current_time = rospy.Time.now()
+
         if state == actionlib.GoalStatus.SUCCEEDED:
             rospy.loginfo(f"{self.string_header} Reached {current_room}")
             self.room_index += 1
             self.sent_goal = False
             return py_trees.common.Status.RUNNING
-        elif state in [actionlib.GoalStatus.PENDING, actionlib.GoalStatus.ACTIVE]:
+        elif state in [actionlib.GoalStatus.PENDING, actionlib.GoalStatus.ACTIVE] and (current_time-self.starting_time < rospy.Duration(40)):
             return py_trees.common.Status.RUNNING
         else:
             rospy.logwarn(f"{self.string_header} Failed to reach {current_room}, skipping")
@@ -58,11 +62,11 @@ class ExploreBehaviour(py_trees.behaviour.Behaviour):
             self.sent_goal = False
             return py_trees.common.Status.RUNNING
         
-    def terminate(self):
-        # Cancel goal
+    def preempted(self):
+        # Procedure in case the call gets cancelled
         self.client.cancel_all_goals()
-
-
+        pass
+        
     def get_prioritized_rooms(self):
         current_hour = datetime.now().hour
         prioritized = []
@@ -84,6 +88,6 @@ class ExploreBehaviour(py_trees.behaviour.Behaviour):
         return prioritized
 
 if __name__ == '__main__':
-    rospy.init_node('exploration_node', anonymous=False,log_level=rospy.INFO)
+    rospy.init_node('exploration_node', anonymous=False,log_level=rospy.DEBUG)
     server = StatusUpdate(rospy.get_name(), ExploreBehaviour)
     rospy.spin()
