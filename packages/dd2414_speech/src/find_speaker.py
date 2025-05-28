@@ -42,22 +42,27 @@ class FindSpeakerActionServer:
         self.string_header = "[FIND_SPEAKER   ]:"
         
     def action(self,goal):
-        rospy.logdebug("[FIND_SPEAKER   ]:Request to look at speaker received")
+        rospy.loginfo("[FIND_SPEAKER   ]:Request to look at speaker received") #CHANGE
         self.person_found = False
-        self.finding_speaker_active = True
         
-        if(len(self.directions) > 0):
-            median_direction = np.median([d for (_, d) in self.directions])
-            self.rotate_to(median_direction)
-            self.directions = []
-        else:
-            rospy.logdebug("[FIND_SPEAKER   ]:Previous speech could not be localized")
-            self.result.result = "Failure"
-            self.finding_speaker_active = False
+        
+        if(not self.finding_speaker_active):
+            if(len(self.directions) > 0):
+                self.finding_speaker_active = True
+                median_direction = np.median([d for (_, d) in self.directions])
+                self.result.result = "Running"
+                self.rotate_to(median_direction)
+                self.directions = []
+                
+            else:
+                rospy.loginfo("[FIND_SPEAKER   ]:Previous speech could not be localized") #CHANGE
+                self.result.result = "Failure"
+
+        
         return self.result
     
     def preempted(self):
-        rospy.logdebug("[FIND_SPEAKER   ]:Goal preempted")
+        rospy.loginfo("[FIND_SPEAKER   ]:Goal preempted") #CHANGE
         self.move_base_client.cancel_goal(self.turning_goal)
         self.finding_speaker_active = False
         self.result.result = "Failure" # Mark the goal as preempted
@@ -66,7 +71,6 @@ class FindSpeakerActionServer:
     def rotate_to(self, direction):
 
         rospy.loginfo(f"[FIND_SPEAKER   ]:Sending request to rotate in direction {direction}")
-
         
         self.turning_to_speech = True
         if direction >= 0 :
@@ -85,19 +89,26 @@ class FindSpeakerActionServer:
         goal.target_pose.pose.orientation.z = quat[2]
         goal.target_pose.pose.orientation.w = quat[3]
 
-        self.move_base_client.send_goal(goal)
         self.turning_goal = goal
-        self.move_base_client.wait_for_result()
 
+        self.move_base_client.send_goal(goal, done_cb=self.rotating_done_cb, feedback_cb=self.test)
+        rospy.loginfo("[FIND_SPEAKER   ]:Sent goal to rotate") #CHANGE REMOVE
+        
+    #def test(self, feedback):
+    #    rospy.loginfo(f"[FIND_SPEAKER   ]:Feedback:  {feedback}")
+    #    rospy.loginfo(f"Goal status text: {self.move_base_client.get_goal_status_text()}") #CHANGE REMOVE
+    #    return
+
+    def rotating_done_cb(self, state, result):
+        rospy.loginfo(f"[FIND_SPEAKER   ]:Sent goal to rotate, state {state}, result {result}") #CHANGE REMOVE
         self.turning_to_speech = False
 
         # Wait to see if body is found during or after rotation
         rospy.sleep(2)
         if(self.finding_speaker_active):
-            rospy.logdebug("[FIND_SPEAKER   ]:Finished turning towards speech, could not find body")
+            rospy.loginfo("[FIND_SPEAKER   ]:Finished turning towards speech, could not find body") #CHANGE
             self.result.result = "Failure"
             self.finding_speaker_active = False
-
 
         rospy.loginfo("[FIND_SPEAKER   ]:Finished turning towards speech")
 
@@ -137,10 +148,10 @@ class FindSpeakerActionServer:
 
                 self.turning_goal = goal
                 self.move_base_client.send_goal(goal)
-                wait = self.move_base_client.wait_for_result()
-                rospy.logdebug("[FIND_SPEAKER   ]:Finished turning to body")                
+                #wait = self.move_base_client.wait_for_result()
+                rospy.loginfo("[FIND_SPEAKER   ]:Turning to found body") #CHANGE          
             except:
-                rospy.logdebug("[FIND_SPEAKER   ]:Could not transform body frame")
+                rospy.loginfo("[FIND_SPEAKER   ]:Could not transform body frame") #CHANGE
 
             return self.result
 
@@ -181,7 +192,7 @@ if __name__ == '__main__':
 
     try:
         # Initialize the node
-        rospy.init_node('find_speaker', anonymous=False,log_level=rospy.INFO)
+        rospy.init_node('find_speaker', anonymous=False,log_level=rospy.DEBUG)
         server = StatusUpdate(rospy.get_name(),FindSpeakerActionServer)
         rospy.spin()
         
