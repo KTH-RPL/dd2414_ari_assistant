@@ -15,8 +15,10 @@ class ParamServer:
         self.global_client = Client("/move_base/global_costmap/inflation_layer", timeout=5)
         self.local_client = Client("/move_base/local_costmap/inflation_layer", timeout=5)
         self.local_rgbd = Client("/move_base/local_costmap/stvl_rgbd_layer", timeout=5)
+        self.service_proxy = rospy.ServiceProxy('/move_base/clear_costmaps',Empty)
         self.current_status = False
         self.currently_at_door = False
+        self.counter = 0
 
         
     def update_inflation_radius(self):
@@ -43,21 +45,30 @@ class ParamServer:
     def dynamic_update(self):
         #if there is a change in status perform the param server update
         if self.current_status != self.currently_at_door:
-            rospy.loginfo(f"Updated Server: Currently at door {self.currently_at_door}")
+            rospy.loginfo(f"{self.header_string}Updated Server: Currently at door {self.currently_at_door}")
             if self.currently_at_door:
                 self.global_client.update_configuration({"inflation_radius": 0.1})
                 self.local_client.update_configuration({"inflation_radius": 0.1})
                 try:
-                    service_proxy = rospy.ServiceProxy('/move_base/clear_costmaps',Empty)
-                    response = service_proxy()  # Call with argument(s)
-                    print("Service response:", response)
+                    response = self.service_proxy()  # Call with argument(s)
+                    rospy.logdebug(f"{self.header_string}Service response:", response)
                 except rospy.ServiceException as e:
-                    print("Service call failed:", e)
+                    rospy.logdebug(f"{self.header_string}Service call failed:", e)
             else:
                 self.global_client.update_configuration({"inflation_radius": self.global_robot_radius})
                 self.local_client.update_configuration({"inflation_radius": self.local_robot_radius})
             
             self.current_status = self.currently_at_door
+
+        if self.counter == 10:
+            try:
+                response = self.service_proxy()  # Call with argument(s)
+                rospy.logdebug(f"{self.header_string}Service response:", response)
+            except rospy.ServiceException as e:
+                rospy.logdebug(f"{self.header_string}Service call failed:", e)
+            self.counter = 0
+        else:
+            self.counter = self.counter + 1
                 
 
 

@@ -1,18 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
 
-  <node name="brain" pkg="dd2414_brain_v2" type="brain_node.py"/>
-
-  <node name="face_gaze_tracker" pkg="dd2414_speech" type="look_at_person.py"/>
-  <node name="nav_move_base_server" pkg="dd2414_navigation" type="move_to.py"/>
-  <!-- <node name="text_speech" pkg="dd2414_text_speech" type="text_speech.py"/> --> <!-- This node we might not be running anymore-->
-  <node name="face_recognition" pkg="dd2414_human_detection" type="face_recognition_node.py"/>
-  <node name="ari_turn_to_speaker" pkg="dd2414_speech" type="find_speaker.py"/>
-  <node name="follow_user" pkg="dd2414_follow_user" type="follow_user.py"/>
-  <node name="body_orientation_listener" pkg="dd2414_talking_orientation" type="body_orientation_listener.py"/>
-  <node name="detect_people_looking_at_ari" pkg="dd2414_human_detection" type="detect_people_looking_at_ari.py"/>
-  <node name="LLM" pkg="chatbox_ari" type="chatbox_ari.py"/>
   <node name="expressive_eyes_divisor" pkg="expressive_eyes_divisor" type="expressive_eyes_divisor.py"/>
   <node name="dd2414_parameter_server" pkg="dd2414_parameter_server" type="parameter_server.py"/>
+  <node name="face_gaze_tracker" pkg="dd2414_speech" type="look_at_person.py"/>
+
+  <node name="move_to_poi" pkg="dd2414_navigation" type="move_to_poi.py"/>
+
+  <!-- <node name="text_speech" pkg="dd2414_text_speech" type="text_speech.py"/> --> <!-- This node we might not be running anymore-->
+  <node name="face_recognition_node" pkg="dd2414_human_detection" type="face_recognition_node.py"/>
+
+
+  <node name="follow_user" pkg="dd2414_follow_user" type="follow_user_2.py"/>
+
+  <node name="translate_conversation" pkg="dd2414_talking_orientation" type="body_orientation_listener.py"/>
+  <include file="$(find dd2414_speech)/find_speaker.launch" />
 
 </launch>
