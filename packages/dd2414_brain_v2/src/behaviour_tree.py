@@ -63,10 +63,8 @@ class Brain:
 
         follow_user_behaviour = py_trees.Sequence(
             "Find speaker, then follow user", 
-            #[stop_look_at_face_behaviour,
             [self.create_behaviour_from_action_server("find speaker"),  
              self.create_behaviour_from_action_server("follow user")]
-             #look_at_face_behaviour]
              )
         
         stop_behaviour = py_trees.Sequence(

@@ -14,7 +14,7 @@ class ExploreBehaviour(py_trees.behaviour.Behaviour):
         rospy.loginfo("[EXPLORE        ]: Initialized")
         self.string_header = "[EXPLORE        ]:"
 
-        self.rooms = ["motion_capture_room", "kitchen", "copy_room", "office", ]
+        self.rooms = ["copy_room", "kitchen", "office"]
 
         self.room_index = 0
         self.client = actionlib.SimpleActionClient("/move_to_poi", brain.BrainAction)
@@ -29,7 +29,7 @@ class ExploreBehaviour(py_trees.behaviour.Behaviour):
 
     def update(self):
         if not self.client.wait_for_server(self.timeout):
-            rospy.logerr("Navigation server not available")
+            rospy.logerr(f"{self.string_header} Navigation server not available")
             return py_trees.common.Status.FAILURE
 
         if self.room_index >= len(self.prioritized_rooms):
@@ -43,14 +43,18 @@ class ExploreBehaviour(py_trees.behaviour.Behaviour):
             self.client.send_goal(goal)
             self.sent_goal = True
             rospy.loginfo(f"{self.string_header} Going to {current_room}")
+            self.starting_time = rospy.Time.now()
 
         state = self.client.get_state()
+        rospy.logdebug(f"{self.string_header} The state of the Go To Service is: {state}")
+        current_time = rospy.Time.now()
+
         if state == actionlib.GoalStatus.SUCCEEDED:
             rospy.loginfo(f"{self.string_header} Reached {current_room}")
             self.room_index += 1
             self.sent_goal = False
             return py_trees.common.Status.RUNNING
-        elif state in [actionlib.GoalStatus.PENDING, actionlib.GoalStatus.ACTIVE]:
+        elif state in [actionlib.GoalStatus.PENDING, actionlib.GoalStatus.ACTIVE] and (current_time-self.starting_time < rospy.Duration(40)):
             return py_trees.common.Status.RUNNING
         else:
             rospy.logwarn(f"{self.string_header} Failed to reach {current_room}, skipping")
@@ -58,11 +62,11 @@ class ExploreBehaviour(py_trees.behaviour.Behaviour):
             self.sent_goal = False
             return py_trees.common.Status.RUNNING
         
-    def terminate(self):
-        # Cancel goal
+    def preempted(self):
+        # Procedure in case the call gets cancelled
         self.client.cancel_all_goals()
-
-
+        pass
+        
     def get_prioritized_rooms(self):
         current_hour = datetime.now().hour
         prioritized = []
