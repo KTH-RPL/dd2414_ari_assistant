@@ -55,14 +55,13 @@ class FindSpeakerActionServer:
                 self.directions = []
                 
             else:
-                rospy.logdebug("[FIND_SPEAKER   ]:Previous speech could not be localized")
-                self.result.result = "Failure"
-
+                rospy.loginfo("[FIND_SPEAKER   ]:Previous speech could not be localized")
+                self.result.result = "Success"
         
         return self.result
     
     def preempted(self):
-        rospy.logdebug("[FIND_SPEAKER   ]:Goal preempted")
+        rospy.logdebug("[FIND_SPEAKER   ]:Goal preempted") 
         self.move_base_client.cancel_goal(self.turning_goal)
         self.finding_speaker_active = False
         self.result.result = "Failure" # Mark the goal as preempted
@@ -91,7 +90,7 @@ class FindSpeakerActionServer:
 
         self.turning_goal = goal
 
-        self.move_base_client.send_goal(goal, done_cb=self.rotating_done_cb, feedback_cb=self.test)
+        self.move_base_client.send_goal(goal, done_cb=self.rotating_done_cb,)
 
     def rotating_done_cb(self, state, result):
         self.turning_to_speech = False
@@ -185,7 +184,7 @@ if __name__ == '__main__':
 
     try:
         # Initialize the node
-        rospy.init_node('find_speaker', anonymous=False,log_level=rospy.DEBUG)
+        rospy.init_node('find_speaker', anonymous=False,log_level=rospy.INFO)
         server = StatusUpdate(rospy.get_name(),FindSpeakerActionServer)
         rospy.spin()
         
