@@ -39,7 +39,7 @@ class TranslateConversation:
         self.translating  = ""
         self.data_dic     = ""
         self.translator   = Translator()
-        self.languages    = {"spanish":"es","english":"en","french":"fr","german":"de","deutsch":"de","japanese":"jp"}
+        self.languages    = {"spanish":"es","english":"en","french":"fr","german":"de","deutsch":"de","japanese":"jp","swedish":"sv"}
 
     def ari_speeking_state(self,msg):
         self.ari_speeking = msg.data
@@ -83,6 +83,8 @@ class TranslateConversation:
             target_language  = str(goal.goal).replace("\"","")#dictonary["source"]
             language_dic     = json.loads(goal.in_dic)
             source_language  = str(language_dic["language"]).replace("\"","")#dictonary["target"]
+            source_language  = source_language.split(",")
+            source_language  = source_language[1]
 #            rospy.loginfo("######################")
 #            rospy.loginfo(self.data_dic) 
 #            rospy.loginfo("######################")
@@ -91,6 +93,7 @@ class TranslateConversation:
                 phrase       = data_dic["translation"]
                 target_language = self.languages[(target_language).lower()]
                 stt_language = data_dic["language"]
+
                 self.process = False
                 return self.generate_translation(phrase,source_language,target_language,stt_language)
             else:

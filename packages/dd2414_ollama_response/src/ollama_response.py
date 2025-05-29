@@ -22,7 +22,7 @@ class OllamaResponse:
         self.system_promt = "You are an office assistant robot called ARI. Be concise and helpful. "
         self.result       = brain.BrainResult()
         self.tts_goal     = tts.TextToSpeechMultilanguageGoal()
-        self.voices       = {"es":"es-MX-DaliaNeural","de":"de-DE-KatjaNeural","fr":"fr-FR-DeniseNeural","jp":"ja-JP-NanamiNeural"}
+        self.voices       = {"es":"es-MX-DaliaNeural","de":"de-DE-KatjaNeural","fr":"fr-FR-DeniseNeural","jp":"ja-JP-NanamiNeural","sv":"sv-SE-SofieNeural"}
 
         self.person_name = "unknown"
 

@@ -231,7 +231,7 @@ class ChatboxARI:
             return
         
     def run_stt(self):
-        rospy.loginfo(f"Listen: {self.listen}, Process: {self.ready_to_process}, Stop: {self.stop}, Speeking:{self.ari_speeking}, Translating:{self.ari_translating}, Data:{self.data_dic}")
+        #rospy.loginfo(f"Listen: {self.listen}, Process: {self.ready_to_process}, Stop: {self.stop}, Speeking:{self.ari_speeking}, Translating:{self.ari_translating}, Data:{self.data_dic}")
 
         if self.ari_speeking == "speaking" or self.data_dic==None: #or self.ari_translating=="translating":
             return
@@ -266,6 +266,7 @@ class ChatboxARI:
         if self.ari_translating=="translating":
             return
         
+        rospy.loginfo("Data:{self.data_dic}")
         aux = self.stt_result.lower()
         aux = aux.split()
         rospy.loginfo(f"{aux}")
