@@ -170,5 +170,5 @@ class BodyOrientationListener:
 
 
 if __name__=="__main__":
-    rospy.init_node("body_orientation_listener",log_level=rospy.DEBUG)
+    rospy.init_node("body_orientation_listener",log_level=rospy.INFO)
     server = StatusUpdate(rospy.get_name(),BodyOrientationListener)

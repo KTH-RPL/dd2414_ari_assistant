@@ -30,6 +30,8 @@ class FaceRecognitionNode:
         self.target_name = None
         self.current_id = None
 
+        self.string_header = "[FACERECOGNITION]:"
+
         self._tf_Listener = TransformListener()
 
         self.ollama_response_client = actionlib.SimpleActionClient("/ollama_response",brain.BrainAction)
@@ -39,8 +41,6 @@ class FaceRecognitionNode:
         self.encodings_file = os.path.join(self.database_path, "face_database.json")
         os.makedirs(self.database_path, exist_ok=True)
         
-        # Load known faces from the file
-        self.known_faces = self.load_known_faces()
         
         # ROS subscribers
         self.name_pub = rospy.Publisher('/face_recognition/user_name', String, queue_size=1)
@@ -49,9 +49,11 @@ class FaceRecognitionNode:
         self.face_ids_sub = rospy.Subscriber("/humans/faces/tracked", IdsList, self.face_id_callback)
         self.face_images_subs = {}
         rospy.loginfo("[FACERECOGNITION]:Initialized")
-        self.string_header = "[FACERECOGNITION]:"
+        
 
         self.working_count = 0
+        # Load known faces from the file
+        self.known_faces = self.load_known_faces()
         
 
     def action(self,goal):
