@@ -118,9 +118,9 @@ class FaceRecognitionNode:
                                      for key, encodings in data["encodings"].items()}
                     return data
                 except json.JSONDecodeError as e:
-                    rospy.logerr(f"Error decoding JSON: {e}")
+                    rospy.logerr(f"[FACERECOGNITION]:Error decoding JSON: {e}")
         else:
-            rospy.logwarn(f"Face database file {self.encodings_file} does not exist.")
+            rospy.logwarn(f"[FACERECOGNITION]: Face database file {self.encodings_file} does not exist.")
         return {"encodings": {}, "ids": [], "names": [], "coordinates": [], "room": [] }
 
 
@@ -142,7 +142,7 @@ class FaceRecognitionNode:
                 json.dump(data, f, indent=4)
             rospy.logdebug("[FACERECOGNITION]:Face data saved successfully.")
         except Exception as e:
-            rospy.logerr(f"Error saving face data: {e}")
+            rospy.logerr(f"[FACERECOGNITION]:Error saving face data: {e}")
 
         
     def face_id_callback(self, msg):

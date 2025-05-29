@@ -88,6 +88,6 @@ class ExploreBehaviour(py_trees.behaviour.Behaviour):
         return prioritized
 
 if __name__ == '__main__':
-    rospy.init_node('exploration_node', anonymous=False,log_level=rospy.DEBUG)
+    rospy.init_node('exploration_node', anonymous=False,log_level=rospy.INFO)
     server = StatusUpdate(rospy.get_name(), ExploreBehaviour)
     rospy.spin()
