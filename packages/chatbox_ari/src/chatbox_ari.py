@@ -316,11 +316,13 @@ class ChatboxARI:
     def process_intent(self, intent_ollama, intent_result, user_input):
         parameter = "unknown"
         response  = ""
-
         if self.intents[intent_result][0] and intent_result != "remember user":
             response = f"Initializing {intent_result} action."
+            if intent_result == "translate":
+                src = self.stt_language
+
             self.stt_language = "en"
-        
+
         if self.intents[intent_result][1] and ":" in intent_ollama:
             parameter = intent_ollama.split(":")[-1].strip().lower().replace("the ","").replace("\"","").replace(".","")
             aux = parameter.split()
@@ -338,6 +340,9 @@ class ChatboxARI:
                 #    response = GoogleTranslator(source='en', target=self.stt_language).translate(response)
             else:
                 response = user_input
+
+        if intent_result == "translate":
+            parameter = parameter + "," + src
 
         parameter = parameter.lower()
         return parameter, response

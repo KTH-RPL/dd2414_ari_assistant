@@ -29,6 +29,7 @@ class ChatboxARI:
         self.verbose           = rospy.get_param("/verbose",False)
         self.stt_result        = ""
         self.stt_language      = "en"
+        self.source_language   = ""
 
         self.intents = {         #Action/Split
             "greet"              :[False,False],
@@ -261,8 +262,10 @@ class ChatboxARI:
         self.listen= False
         self.ready_to_process = True
 
-        self.stt_result   = self.data_dic["translation"].replace(".","")
-        self.stt_language = self.data_dic["language"]
+        self.stt_result      = self.data_dic["translation"].replace(".","")
+        self.stt_language    = self.data_dic["language"]
+        self.source_language = self.data_dic["language"]
+
         a = len(self.stt_result.split())
         rospy.loginfo(f"{self.stt_result},{a}")
 
@@ -293,14 +296,14 @@ class ChatboxARI:
         
         if self.ready_to_process:
             rospy.loginfo(f"[LLM            ]:User said: {self.stt_result}, {self.stt_language}")
-            self.process_user_input(self.stt_result)
+            self.process_user_input(self.stt_result,self.stt_language)
             self.listen           = True
             self.ready_to_process = False
 
         self.data_dic = None
             
 
-    def process_intent(self, intent_ollama, intent_result, user_input):
+    def process_intent(self, intent_ollama, intent_result, user_input,lang):
         parameter = "unknown"
         response  = ""
         
@@ -317,7 +320,9 @@ class ChatboxARI:
         if self.intents[intent_result][0] and intent_result != "remember user":
             response = f"Initializing {intent_result} action."
             if intent_result == "translate":
-                parameter = parameter + "," + self.stt_language
+                rospy.loginfo(lang)
+                rospy.loginfo(self.source_language)
+                parameter = parameter + "," + str(lang)
             self.stt_language = "en"
 
 
@@ -332,7 +337,8 @@ class ChatboxARI:
         parameter = parameter.lower()
         return parameter, response
 
-    def process_user_input(self, user_input):
+    def process_user_input(self, user_input, language):
+        lang = language
         if len(user_input) < 3:
             return
 
@@ -348,7 +354,7 @@ class ChatboxARI:
 
         else:
 
-            parameter, response = self.process_intent(intent_ollama, intent_result, user_input)
+            parameter, response = self.process_intent(intent_ollama, intent_result, user_input,lang)
             rospy.loginfo(len(response.split(" ")))
             if parameter == "" and response == "" or len(response.split(" ")) > 27:
                 self.reject_message()
