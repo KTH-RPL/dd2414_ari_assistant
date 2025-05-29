@@ -27,13 +27,16 @@ class LookAtFace:
         if(goal.goal == "start"):
             self.active = True
             self.result.result = "Success"
+            rospy.logwarn(f"{self.string_header} Starting look at face")
 
         elif(goal.goal == "stop"):
             self.active = False
             self.look_forward()
             self.result.result = "Success"
+            rospy.logwarn(f"{self.string_header} Stopping look at face")
         
         else:
+            rospy.logwarn(f"{self.string_header} Invalid goal")
             self.result.result = "Failure"
         
         return self.result
@@ -67,7 +70,8 @@ class LookAtFace:
 
                     # Create and publish gaze target
                     target = PointStamped(point=Point(x=trans.x, y=trans.y, z=trans.z), header=T.header)
-                    self.look_at_pub.publish(target)
+                    if(self.active):
+                        self.look_at_pub.publish(target)
 
                 except Exception as e:
                     rospy.logwarn(f"[LOOK_AT_PERSON ]:Could not transform face position: {e}")
@@ -79,13 +83,16 @@ class LookAtFace:
             self.tick = 0
 
         elif(not self.looking_ahead):
-            rospy.logdebug("[LOOK_AT_PERSON ]:No faces detected")
-            #rospy.loginfo("[LOOK_AT_PERSON ]:No faces detected")
-            target = PointStamped(point=Point(x=10, y=0, z=0))
-            target.header.frame_id = '/sellion_link'
+            if(self.active):
+                rospy.logdebug("[LOOK_AT_PERSON ]:No faces detected")
+                #rospy.loginfo("[LOOK_AT_PERSON ]:No faces detected")
+                target = PointStamped(point=Point(x=10, y=0, z=0))
+                target.header.frame_id = '/sellion_link'
 
-            self.look_at_pub.publish(target)
-            self.looking_ahead = True
+                self.look_at_pub.publish(target)
+                self.looking_ahead = True
+            else:
+                self.look_forward()
 
         return
     
@@ -98,7 +105,7 @@ class LookAtFace:
 
 
 if __name__ == '__main__':
-    rospy.init_node("face_gaze_tracker",log_level=rospy.INFO)
+    rospy.init_node("face_gaze_tracker",log_level=rospy.WARN)
     server = StatusUpdate(rospy.get_name(),LookAtFace)
 
     while not rospy.is_shutdown():
