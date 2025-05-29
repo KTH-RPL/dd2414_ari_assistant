@@ -5,13 +5,6 @@ import operator
 import os
 import rospy
 from std_msgs.msg import String
-from std_msgs.msg import Bool
-import json
-import time
-import cv2
-from sensor_msgs.msg import Image
-from cv_bridge import CvBridge
-from py_trees.display import render_dot_tree
 from stop_behaviour import StopBehaviour
 from exploration_node import ExploreBehaviour
 from rospy.exceptions import ROSException
@@ -99,7 +92,7 @@ class Brain:
 
 
         self.action_dict = {
-            "stop"                 :stop_behaviour,
+            #"stop"                 :stop_behaviour,
             "translate"            :self.setup_translate_behaviour(),
             "remember user"        :self.setup_greet_behaviour(),
             #"face recognition"     :self.behaviours["face recognition"],
@@ -137,7 +130,6 @@ class Brain:
                 variable_name=action,
                 expected_value=False
             )
-            condition.visibility_level = py_trees.common.VisibilityLevel.DETAIL 
 
             reset_fail_counter = py_trees.blackboard.SetBlackboardVariable(
                 name="Set fail counter back to 0",
@@ -203,8 +195,6 @@ class Brain:
 
         look_at_face_behaviour.tick_once()
         rospy.loginfo("Brain Finished Initializing")
-        level = py_trees.common.VisibilityLevel.BIG_PICTURE
-        tree = render_dot_tree(self.behaviour_tree.root, visibility_level=level)
 
     def print_tree(self, tree: py_trees.trees.BehaviourTree) -> None:
         # Print the behaviour tree and its current status.
