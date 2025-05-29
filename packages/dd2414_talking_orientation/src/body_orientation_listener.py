@@ -77,7 +77,7 @@ class BodyOrientationListener:
     def normalize_quaternion(self, q):
         norm = np.linalg.norm(q)
         if norm == 0:
-            rospy.logwarn("[BODYORIENTATION]: Quaternion has zero length, using default identity quaternion.")
+            rospy.logwarn(f"{self.string_header} Quaternion has zero length, using default identity quaternion.")
             return [0.0, 0.0, 0.0, 1.0]  # Identity quaternion
         return [x / norm for x in q]
 
@@ -115,7 +115,7 @@ class BodyOrientationListener:
                     transform_valid = True
                 except (LookupException, ConnectivityException, ExtrapolationException) as e:
                     rospy.logdebug(e)
-                    rospy.logdebug("[BODYORIENTATION]:Transform not published yet")
+                    rospy.logdebug(f"{self.string_header} Transform not published yet")
                     transform_valid = False
                     continue
 
@@ -142,12 +142,12 @@ class BodyOrientationListener:
                             result = self.nav_move_base(left_trans[0],left_trans[1],0,left_rot[0],left_rot[1],left_rot[2],left_rot[3])
 
                             if result == actionlib.GoalStatus.SUCCEEDED:
-                                rospy.logdebug("[BODYORIENTATION]:Arrived at target!")
+                                rospy.logdebug(f"{self.string_header} Arrived at target!")
                                 result_brain.result = "Success"
                                 return result_brain
                                 
                             else:
-                                rospy.logdebug("[BODYORIENTATION]:Trying right position!")
+                                rospy.logdebug(f"{self.string_header} Trying right position!")
                                 result = self.nav_move_base(right_trans[0],right_trans[1],0,right_rot[0],right_rot[1],right_rot[2],right_rot[3])
                                 if result == actionlib.GoalStatus.SUCCEEDED:
                                     result_brain.result = "Success"
@@ -156,7 +156,7 @@ class BodyOrientationListener:
                                     result_brain.result = "Failure"
                                     return result_brain
                         else:
-                            rospy.logdebug("[BODYORIENTATION]:Transform not available!")
+                            rospy.logdebug(f"{self.string_header} Transform not available!")
                             result_brain.result = "Working"
                             return result_brain
                         

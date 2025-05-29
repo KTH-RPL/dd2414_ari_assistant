@@ -93,7 +93,7 @@ class MoveToPOI:
 
             #If there is a registered room to the person
             if room is not None and room != "" :
-                rospy.logdebug(f"Going to Person in {room}")
+                rospy.logdebug(f"{self.string_header} Going to Person in {room}")
                 result.result= self.go_to_poi(room)
             else:
                 if room == None:
