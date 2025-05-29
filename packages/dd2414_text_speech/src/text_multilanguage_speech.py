@@ -21,7 +21,7 @@ class TextMultilanguageSpeech:
 
         self.tts_client = SimpleActionClient("/tts",TtsAction)
         self.tts_client.wait_for_server()
-        self.rate = rospy.Rate(1)
+        self.rate = rospy.Rate(10)
         self.talking = ""
 
         # Publishers
@@ -33,6 +33,7 @@ class TextMultilanguageSpeech:
     def tts_output(self,text):
         #self.speek_pub.publish("speeking")
         self.talking ="speaking"
+        self.speek_pub.publish(self.talking)
         goal                 = TtsGoal()
         goal.rawtext.lang_id = "en_US"
         goal.rawtext.text    = text
@@ -52,15 +53,21 @@ class TextMultilanguageSpeech:
 
             if lang == "en":
                 # Use PAL TTS
+                rospy.loginfo(text_path)
                 self.tts_output(text_path)
             else:
                 # Now load into simpleaudio and play
                 #self.speek_pub.publish("speeking")
                 self.talking = "speaking"
+                self.speek_pub.publish(self.talking)
+                audio = AudioSegment.from_wav(text_path)
+                louder_audio = audio + 6
+                louder_audio.export(text_path, format="wav")
                 wave_obj = sa.WaveObject.from_wave_file(text_path)
+
                 play_obj = wave_obj.play()
                 play_obj.wait_done()
-                rospy.sleep(1.5)
+                rospy.sleep(1)
 
             rospy.loginfo("TTS playback completed.")
             rospy.sleep(1)

@@ -3,6 +3,7 @@ import os
 import json
 import rospy
 import subprocess
+import edge_tts
 import dd2414_brain_v2.msg as brain
 import dd2414_text_speech.msg as tts 
 
@@ -21,6 +22,7 @@ class OllamaResponse:
         self.system_promt = "You are an office assistant robot called ARI. Be concise and helpful. "
         self.result       = brain.BrainResult()
         self.tts_goal     = tts.TextToSpeechMultilanguageGoal()
+        self.voices       = {"es":"es-MX-DaliaNeural","de":"de-DE-KatjaNeural","fr":"fr-FR-DeniseNeural","jp":"ja-JP-NanamiNeural","sv":"sv-SE-SofieNeural"}
 
         self.person_name = "unknown"
 
@@ -61,6 +63,20 @@ class OllamaResponse:
     def preempted(self):
         pass
 
+    def tts_multilanguage_edge(self,text,language):
+        rospy.loginfo("GTTS initializing")
+        rospy.loginfo(text)
+        communicate = edge_tts.Communicate(text,voice=self.voices[language])
+        communicate.save_sync(self.mp3_path)
+
+        # Convert to WAV
+        audio = AudioSegment.from_mp3(self.mp3_path)
+        audio.export(self.wav_path, format="wav")
+
+        # Copy audio file to ARI
+        command = ["sshpass", "-p", "pal", "scp", self.wav_path, "pal@192.168.128.28:/tmp/"]
+        subprocess.run(command)
+
     def tts_multilanguage_output(self,text,language):
         rospy.loginfo("GTTS initializing")
         rospy.loginfo(text)
@@ -82,8 +98,11 @@ class OllamaResponse:
         rospy.loginfo(f"{intent}: {phrase}")
         rospy.loginfo(f"Name: {self.person_name}")
 
-        if intent in ["greet","goodbye"] and self.person_name != "unknown":
-            name_promt = "My name is: " + self.person_name + ". Include it in the response."
+        if intent in ["greet","goodbye"]:
+            if self.person_name != "unknown":
+                name_promt = "My name is: " + self.person_name + ". Include it in the response."
+            else:
+                name_promt = ""
 
             completion = self.api.chat(
                 model=self.model_ollama, 
@@ -100,7 +119,7 @@ class OllamaResponse:
             response = phrase
 
         if language != "en":
-            self.tts_multilanguage_output(response,language)
+            self.tts_multilanguage_edge(response,language)
             self.tts_goal.data = self.wav_path
         else:
             self.tts_goal.data = response
