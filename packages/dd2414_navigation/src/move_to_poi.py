@@ -21,28 +21,11 @@ class MoveToPOI:
         self.goal_id = ""
         self._ac_navigation = actionlib.SimpleActionClient('/poi_navigation_server/go_to_poi',GoToPOIAction)
         self.move_client = actionlib.SimpleActionClient('/move_base', MoveBaseAction)
-        self.move_goal = rospy.Subscriber('/move_base/goal', MoveBaseActionGoal, self.move_cb)
-        self.move_status = rospy.Subscriber('/move_base/status',GoalStatusArray, self.status_cb)
         self._sub_map_poi = rospy.Subscriber('/poi_marker_server/update_full',InteractiveMarkerInit, self.map_poi_conversion)
         self.encodings_file = "/home/pal/deployed_ws/lib/dd2414_human_detection/face_database.json"
         self.current_room = ""
         self.status = 3
         
-    
-    def move_cb(self,msg):
-
-        self.goal_id = msg.goal_id.id
-        rospy.loginfo(f"GOAL ID: {self.goal_id}")
-        return
-    
-    def status_cb(self,msg):
-        for status_obj in msg.status_list:
-
-            if self.goal_id == status_obj.goal_id.id:
-                self.move_client_status = status_obj.status
-                rospy.loginfo(f"ID: {self.goal_id} Status: {self.move_client_status}")
-        return
-    
     def load_known_faces(self):
         if os.path.exists(self.encodings_file):
             with open(self.encodings_file, "r") as f:
@@ -54,9 +37,9 @@ class MoveToPOI:
                                         for key, encodings in data["encodings"].items()}
                     return data
                 except json.JSONDecodeError as e:
-                    rospy.logerr(f"Error decoding JSON: {e}")
+                    rospy.logerr(f"[MOVE_TO_POI    ]:Error decoding JSON: {e}")
         else:
-            rospy.logwarn(f"Face database file {self.encodings_file} does not exist.")
+            rospy.logwarn(f"[MOVE_TO_POI    ]:Face database file {self.encodings_file} does not exist.")
 
         return {"encodings": {}, "ids": [], "names": [], "coordinates": [], "room": []}
 
