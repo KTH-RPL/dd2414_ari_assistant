@@ -16,10 +16,13 @@ class ChatboxARI:
     def __init__(self):
         self.rate              = rospy.Rate(1)
         self.listen            = False
+        self.robot_time        = rospy.Time.now()
+        self.actual_time       = rospy.Time.now()
         self.stop              = False
         self.ready_to_process  = True
         self.data_dic          = None
         self.string_header     = "[LLM            ]:"
+        self.robot_names       = ["robot","robert","robots"]
         self.languages         = ["en","es","de","fr","sv"]
         self.languages         = {"en":"English","es":"Spanish","de":"German","fr":"French","sv":"Swedish","jp":"Japanese"}
 
@@ -42,18 +45,6 @@ class ChatboxARI:
             "translate"          :[True ,True ],
             "other"              : False      }
         
-        self.intents_description  = [
-            "greet: The robot needs to greet the person. This action is detonated when the user greets and DOES NOT provided his/her name in the sentence", 
-            "remember user: The robot needs to remember the name of the person that is taliking. This happens ONLY when the person introduce itself to the robot by saying his/her own name, that is the main difference against the action \"greet\", as an example the user might say: hello my name is David, hi I'm Joshua, etc."
-            "goodbye: The robot needs to say goodbye to the person",
-            "provide information: The robot needs to answer a question or explain a topic asked by the user",
-            "go to: The robot needs to move to an specific place. This action can be detonated by asking or demaning, examples: \"Go to the kitchen\", \"Go to the corner\", \"Move 5 meters\" ",
-            "follow user: The robot needs to continuously following a person and not just \"go to\" towards them, \"come with me\" is an example of the user asking the robot to folow user", 
-            "find object: The robot have to start moving around, in order to find the object or person asked. This action can be detonated by asking things like \"Where is the red ball?\" or demaning a search like \"Find a chair\", \"Where is David?\", \"Find Laura\" ", 
-            "explore: The has to start moving around to create a map of the place, this action can be detonated by saying things like: \"start exploring\", \"create a map\" ", 
-            "translate: The robot has to help the user to translate sentences or a conversation", 
-            "other: If any of the other actions does not fit, the robot has to classify it as other"]
-
         self.intents_des = [
         {
             "name": "greet",
@@ -121,7 +112,6 @@ class ChatboxARI:
         self.dictonary_pub = rospy.Publisher("/brain/intent",String,queue_size=10)
 
         # Subscribers
-        #rospy.Subscriber("/humans/voices/anonymous_speaker/speech",LiveSpeech,self.asr_result)
         rospy.Subscriber("/translate_conversation",String,self.ari_translating_state)
         rospy.Subscriber("/tts/ARI_speeking",String,self.ari_speeking_state)
         rospy.Subscriber("/stt/transcript",String,self.stt)
@@ -133,7 +123,8 @@ class ChatboxARI:
         self.tts_output("Ready to operate")
 
         rospy.sleep(3) 
-        self.listen   = True
+        self.listen           = True
+        self.ready_to_process = False
 
     def setup_tts(self):
         self.tts_client = SimpleActionClient("/tts",TtsAction)
@@ -142,7 +133,6 @@ class ChatboxARI:
 
     def tts_output(self,text):
         if self.ari_translating != "translating":
-            self.listen          = False
             goal                 = TtsGoal()
             goal.rawtext.lang_id = "en_US"
             goal.rawtext.text    = text
@@ -157,19 +147,10 @@ class ChatboxARI:
         self.ari_speeking = msg.data
 
     def reject_message(self):
-        self.tts_output("I could not understand, please say it again.")
+        self.publish_intent("reject","unknown","I could not understand, please say it again.","en")
 
     def build_intent_query(self, user_input):
         
-        msg = ["The robot needs to execute one of the following actions:", ' '.join(list(self.intents.keys())), 
-               "The description of each action is the following: ", ' '.join(self.intents_description), 
-               ".The user said:", str(user_input),"What action did the user expect from the robot?",
-               ".RETURN ONLY the option that best matches from the list provided, DO NOT mention any of the other ones in the response.", 
-               "Additionally If the intent is \"go to\" return \"go to:specified_place\", if it is \"translate\" return \"translate to:specified_language\"", 
-               " if it is \"find object\" return \"find object:object_to_find\"",
-               " if it is \"remember user\" return \"remember user:user_name\""]
-        #msg = [f"Based on the following intent schema, classify the user's message into one of the intent names. Intent schema: {self.intent_json} User input: {user_input} What action did the user expect from the robot? RETURN ONLY the option that best matches. Additionally If the intent is \"go to\" return \"go to:specified_objective\", if it is \"translate\" return \"translate to:specified_language\", if it is \"find object\" return \"find object:object_to_find\", if it is \"remember user\" return \"remember user:user_name\""]
-
         msg = f"""
         You are a classifier that determines both the intent and key details (parameters) from a user's message. 
         Based on the following intent schema, classify the user's input and extract the relevant parameter if applicable.
@@ -183,10 +164,9 @@ class ChatboxARI:
         User input: "{user_input}"
         Respond with only one line in the correct format.
         """
-        #msg = ' '.join(msg)
 
         return msg
-
+    
     def ask_ollama(self, msg, promt=""):
         completion = self.api.chat(
             model=self.model_ollama, 
@@ -222,23 +202,24 @@ class ChatboxARI:
         return "No match found"
     
     
-    def publish_intent(self, intent, parameter, response):
-        intent_data = {"intent":intent,"input":parameter,"phrase":response,"language":self.stt_language}
+    def publish_intent(self, intent, parameter, response,language=""):
+        if language == "":
+            language=self.stt_language
+
+        intent_data = {"intent":intent,"input":parameter,"phrase":response,"language":language}
         self.dictonary_pub.publish(json.dumps(intent_data))
-        rospy.loginfo(f"[LLM            ]:Published intent:{intent}, Input:{parameter}, Phrase:{response}, Lang:{self.stt_language}")
+        rospy.loginfo(f"[LLM            ]:Published intent:{intent}, Input:{parameter}, Phrase:{response}, Lang:{language}")
 
     def stt(self,msg):
+        self.actual_time = rospy.Time.now()
         if not msg.data:
             return 
 
         self.data_dic = msg.data
         
         try:
-            if self.listen and self.data_dic != None and self.ari_speeking != "speaking" :
+            if self.data_dic != None and self.ari_speeking != "speaking" :
                 rospy.loginfo(self.data_dic)
-            #self.run_stt()
-            #self.ready_to_process = True
-            
                 self.data_dic = json.loads(self.data_dic)
                 #rospy.loginfo("Listen:",self.listen,"Process:",self.ready_to_process,"Data Dic:",self.data_dic)
             else:
@@ -250,52 +231,84 @@ class ChatboxARI:
             return
         
     def run_stt(self):
-        rospy.loginfo(f"Listen: {self.listen}, Process: {self.ready_to_process}, Stop: {self.stop}, Speeking:{self.ari_speeking}, Translating:{self.ari_translating}, Data:{self.data_dic}")
+        #rospy.loginfo(f"Listen: {self.listen}, Process: {self.ready_to_process}, Stop: {self.stop}, Speeking:{self.ari_speeking}, Translating:{self.ari_translating}, Data:{self.data_dic}")
 
-        if self.ari_speeking == "speaking" or not self.listen or self.data_dic==None: #or self.ari_translating=="translating":
+        if self.ari_speeking == "speaking" or self.data_dic==None: #or self.ari_translating=="translating":
             return
         
         if isinstance(self.data_dic, str):
             self.data_dic = json.loads(self.data_dic)
 
-        self.listen= False
-        self.ready_to_process = True
+        #self.ready_to_process = True
 
         self.stt_result   = self.data_dic["translation"].replace(".","")
         self.stt_language = self.data_dic["language"]
-        a = len(self.stt_result.split())
-        rospy.loginfo(f"{self.stt_result},{a}")
 
         if "stop" in (self.stt_result).lower() and len(self.stt_result.split())<2:
             self.stop = True 
-            self.ready_to_process = False
-            self.listen = False
-            self.publish_intent("stop","","Stopping")
-            self.tts_output("Stopping")
-
-        if "start" in (self.stt_result).lower()  or "continue" in ((self.stt_result).lower()).split() and len(self.stt_result.split(" "))<2:
-            self.tts_output("Listening")
-            self.stop = False
             self.listen = True
             self.ready_to_process = False
+            self.publish_intent("stop","unknown","Stopping")
+            self.data_dic = None
+            #self.tts_output("Stopping")
+            return
 
+        #if "start" in (self.stt_result).lower()  or "continue" in ((self.stt_result).lower()).split() and len(self.stt_result.split(" "))<2:
+        #    self.tts_output("Listening")
+        #   self.stop = False
+        #    self.listen = True
+        #    self.ready_to_process = False
+
+        #if self.stop:
+        #    self.listen = True
+        #    return
+    
         if self.ari_translating=="translating":
             return
-
-        if self.stop:
-            self.listen = True
-            return
-
-        if not self.stt_language in list(self.languages.keys()):
-            self.reject_message()
-            self.listen = True
-            self.ready_to_process = False
         
-        if self.ready_to_process:
+        rospy.loginfo("Data:{self.data_dic}")
+        aux = self.stt_result.lower()
+        aux = aux.split()
+        rospy.loginfo(f"{aux}")
+        if len(aux)>=2:
+            characters_remove = ",.?!"
+            aux0 = ''.join(c for c in str(aux[0]) if c not in characters_remove)
+            aux1 = ''.join(c for c in str(aux[1]) if c not in characters_remove)
+
+            if aux0 in self.robot_names or aux1 in self.robot_names:
+                if "robert" in self.stt_result.lower():
+                    self.stt_result = (self.stt_result.lower()).replace("robert", "robot", 1)
+                self.robot_time = rospy.Time.now()
+                self.listen     = True
+                self.ready_to_process = True
+
+        elif len(aux)==1:
+            characters_remove = ",.?!"
+            aux0 = ''.join(c for c in aux[0] if c not in characters_remove)
+            if aux0 in self.robot_names:
+                self.robot_time = rospy.Time.now()
+                self.listen     = True
+                self.ready_to_process = True
+                self.data_dic = None
+                return
+        else:
+            return 
+        
+        time = (self.actual_time - self.robot_time).to_sec()
+        rospy.loginfo(f"{time}")
+        if time>6:
+            self.listen = False 
+        
+        if self.ready_to_process and self.listen and len(self.stt_result) > 4:
             rospy.loginfo(f"[LLM            ]:User said: {self.stt_result}, {self.stt_language}")
-            self.process_user_input(self.stt_result)
-            self.listen           = True
-            self.ready_to_process = False
+            if not self.stt_language in list(self.languages.keys()):
+                self.reject_message()
+                self.listen = False
+                self.ready_to_process = False
+            else:
+                self.process_user_input(self.stt_result)
+                self.listen           = False
+                self.ready_to_process = False
 
         self.data_dic = None
             
@@ -342,7 +355,6 @@ class ChatboxARI:
 
         if intent_result in {"No match found","other"}:
             self.reject_message()
-
         else:
 
             parameter, response = self.process_intent(intent_ollama, intent_result, user_input)
@@ -370,6 +382,3 @@ if __name__ == '__main__':
 
     except rospy.ROSInterruptException:
         rospy.logerr("Chatbos: ROS Node interrupted.")
-
-    
-

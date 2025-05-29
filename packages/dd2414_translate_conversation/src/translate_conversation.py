@@ -39,7 +39,7 @@ class TranslateConversation:
         self.translating  = ""
         self.data_dic     = ""
         self.translator   = Translator()
-        self.languages    = {"spanish":"es","english":"en","french":"fr","german":"de"}
+        self.languages    = {"spanish":"es","english":"en","french":"fr","german":"de","deutsch":"de","japanese":"jp","swedish":"sv"}
 
     def ari_speeking_state(self,msg):
         self.ari_speeking = msg.data
@@ -82,7 +82,11 @@ class TranslateConversation:
             #dictonary        = json.loads(goal.in_dic)
             target_language  = str(goal.goal).replace("\"","")#dictonary["source"]
             language_dic     = json.loads(goal.in_dic)
-            source_language  = str(language_dic["language"]).replace("\"","")#dictonary["target"]
+            #source_language  = str(language_dic["language"]).replace("\"","")#dictonary["target"]
+            #rospy.loginfo(source_language)
+            source_language  = target_language.split(",")
+            target_language  = source_language[0]
+            source_language  = source_language[1]
 #            rospy.loginfo("######################")
 #            rospy.loginfo(self.data_dic) 
 #            rospy.loginfo("######################")
@@ -91,6 +95,7 @@ class TranslateConversation:
                 phrase       = data_dic["translation"]
                 target_language = self.languages[(target_language).lower()]
                 stt_language = data_dic["language"]
+
                 self.process = False
                 return self.generate_translation(phrase,source_language,target_language,stt_language)
             else:
@@ -106,6 +111,7 @@ class TranslateConversation:
             return self.result
 
     def preempted(self):
+        self.translate_pub.publish("")
         pass
 
     def generate_translation(self,phrase,src_language,target_language,language_stt):
@@ -120,6 +126,8 @@ class TranslateConversation:
                     languages  = [src_language,target_language]
                     rospy.loginfo(languages)
                     rospy.loginfo(language_stt)
+                    rospy.loginfo("Before Translate object")
+                    rospy.loginfo(f"Phrase: {phrase}")
                     if language_stt in languages:
                         index = languages.index(language_stt)-1
                         to_lang     = languages[index]
@@ -129,15 +137,16 @@ class TranslateConversation:
                         to_lang     = "en"
                         result_text = "Please say it again, I did not understand." #self.translator.translate("Please say it again, I did not understand.", src="en", dest=to_lang)
                     
+                    rospy.loginfo("After Translate Object")
                     rospy.loginfo(result_text)
                     goal        = brain.BrainGoal()
                     goal.goal   = "a"
                     goal.in_dic = {"language":to_lang,"intent":"translate","phrase":result_text}
+                    rospy.loginfo("[Ollama Response]:Response sent to TTS")
+                    rospy.loginfo(goal)
                     goal.in_dic = json.dumps(goal.in_dic)
                     # Send audio goal
-                    rospy.loginfo("[Ollama Response]:Response sent to TTS")
                     #self.ac_ttsm.send_goal_and_wait(self.tts_goal)
-                    rospy.loginfo(goal)
                     self.ac_ollama_response.send_goal_and_wait(goal)
                     state = self.ac_ollama_response.get_state()
 
