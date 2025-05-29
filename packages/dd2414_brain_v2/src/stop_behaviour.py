@@ -14,8 +14,6 @@ class StopBehaviour(py_trees.behaviour.Behaviour):
 
         super(StopBehaviour, self).__init__(name=name)
 
-        self.ollama_response_client = actionlib.SimpleActionClient("/ollama_response",brain.BrainAction)
-        
         self.blackboard = py_trees.blackboard.Blackboard()
         self.counter = 0
         self.action_dict = action_dict
@@ -26,16 +24,6 @@ class StopBehaviour(py_trees.behaviour.Behaviour):
         return True
 
     def update(self) -> py_trees.common.Status:
-
-        goal = brain.BrainGoal()
-        goal.goal="stop"
-        goal.in_dic = json.dumps({
-            "intent": "stop",
-            "input": "",
-            "phrase": "Stopping",
-            "language": "en"
-        })
-        self.ollama_response_client.send_goal(goal)
 
         for action in self.action_dict:
             self.blackboard.set(action, False)
