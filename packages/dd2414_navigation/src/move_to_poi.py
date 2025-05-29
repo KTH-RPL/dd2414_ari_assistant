@@ -20,10 +20,11 @@ class MoveToPOI:
         self.poi_dict = {}
         self._ac_navigation = actionlib.SimpleActionClient('/poi_navigation_server/go_to_poi',GoToPOIAction)
         self.move_client = actionlib.SimpleActionClient('/move_base', MoveBaseAction)
+        self.ollama_response_client = actionlib.SimpleActionClient("/ollama_response",brain.BrainAction)
         self._sub_map_poi = rospy.Subscriber('/poi_marker_server/update_full',InteractiveMarkerInit, self.map_poi_conversion)
         self.encodings_file = "/home/pal/deployed_ws/lib/dd2414_human_detection/face_database.json"
         self.current_room = ""
-        self.status = 3
+        self.status = -1
     
 
     def load_known_faces(self):
@@ -58,8 +59,8 @@ class MoveToPOI:
             self.status = status
             result = self._ac_navigation.get_result()
             
-            rospy.logdebug(self.string_header + str(status))
-            rospy.logdebug(self.string_header + str(result))
+            rospy.logdebug(self.string_header +f"Status:{status}")
+            rospy.logdebug(self.string_header +f"Result:{result}")
 
             if status == 3:
                 return "Success"
@@ -79,15 +80,23 @@ class MoveToPOI:
         else:
             room = self.get_poi_from_person(goal.goal)
             if self.current_room != room: #Room the person is has been changed
-                rospy.loginfo(self.string_header + "The persons location has been updated")
-                self._ac_navigation.cancel_all_goals()
-                self.status = None
+                if self.status == 0 or self.status == 1:
+                    rospy.loginfo(self.string_header + f"The persons location has been updated | Status :{self.status} |Current Room: {self.current_room} | Room: {room}")
+                    self.preempted()
+                    rospy.loginfo(f"{self.string_header} Found the person \"{goal.goal}\" in room \"{room}\" when it was this room before \"{self.current_room}\"")
+                    goal = brain.BrainGoal()
+                    goal.goal = "found_person"
+                    goal.in_dic = json.dumps({"intent":"","input":"","phrase":"Found the person","language":"en"})
+                    self.ollama_response_client.send_goal(goal)
+                    self.status = 3
+                    result.result = "Success"
+                    return result
             self.current_room = room
 
 
             #If there is a registered room to the person
             if room is not None and room != "" :
-                rospy.logdebug(f"Going to Person in {room}")
+                rospy.logdebug(f"{self.string_header}Going to Person in {room}")
                 result.result= self.go_to_poi(room)
             else:
                 if room == None:
@@ -108,6 +117,8 @@ class MoveToPOI:
         self._ac_navigation.cancel_all_goals()
         rospy.sleep(rospy.Duration(0.5))
         self.move_client.cancel_all_goals()
+        self.status = 4
+        self.current_room = ""
         return
         
     def get_poi_from_person(self,goal):

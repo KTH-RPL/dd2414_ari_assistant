@@ -45,7 +45,7 @@ class ParamServer:
     def dynamic_update(self):
         #if there is a change in status perform the param server update
         if self.current_status != self.currently_at_door:
-            rospy.loginfo(f"{self.header_string}Updated Server: Currently at door {self.currently_at_door}")
+            rospy.logdebug(f"{self.header_string}Updated Server: Currently at door {self.currently_at_door}")
             if self.currently_at_door:
                 self.global_client.update_configuration({"inflation_radius": 0.1})
                 self.local_client.update_configuration({"inflation_radius": 0.1})
@@ -60,7 +60,7 @@ class ParamServer:
             
             self.current_status = self.currently_at_door
 
-        if self.counter == 10:
+        if self.counter == 5:
             try:
                 response = self.service_proxy()  # Call with argument(s)
                 rospy.logdebug(f"{self.header_string}Service response:", response)
