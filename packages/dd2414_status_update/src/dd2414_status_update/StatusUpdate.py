@@ -2,7 +2,7 @@
 
 import rospy
 import actionlib
-import dd2414_brain_v2.msg as brain
+import dd2414_brain.msg as brain
 import py_trees
 import json
 
