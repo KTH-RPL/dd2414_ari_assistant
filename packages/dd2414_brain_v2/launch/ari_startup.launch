@@ -7,7 +7,6 @@
 
   <node name="move_to_poi" pkg="dd2414_navigation" type="move_to_poi.py"/>
 
-  <!-- <node name="text_speech" pkg="dd2414_text_speech" type="text_speech.py"/> --> <!-- This node we might not be running anymore-->
   <node name="face_recognition_node" pkg="dd2414_human_detection" type="face_recognition_node.py"/>
 
 
