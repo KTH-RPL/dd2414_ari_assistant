@@ -4,6 +4,7 @@ import rospy
 import actionlib
 import dd2414_brain_v2.msg as brain
 import py_trees
+import json
 
 class StatusUpdate(py_trees.behaviour.Behaviour):
     
@@ -49,7 +50,8 @@ class StatusUpdate(py_trees.behaviour.Behaviour):
         if(self._action_name != "/ollama_response" 
            and not (self._action_name == "/face_recognition_node" and self.goal.goal == "unknown")
            and self._action_name != "/find_speaker"
-           and self._action_name != "/face_gaze_tracker"):
+           and self._action_name != "/face_gaze_tracker"
+           and self._action_name != "/body_orientation_listener"):
             self.ollama_response_client.send_goal(self.goal)
 
         self.previous_goal = self.goal
@@ -60,8 +62,14 @@ class StatusUpdate(py_trees.behaviour.Behaviour):
             if(self.previous_goal != self.goal):
                 self.node.preempted()
                 self.previous_goal = self.goal
+                self.ollama_response_client.send_goal(self.goal)
 
             if self._as.is_preempt_requested():
+                goal = brain.BrainGoal()
+                goal.goal="stop"
+                
+                goal.in_dic = json.dumps({"intent":"stop","input":"","phrase":"Stopping","language":"en"})
+                self.ollama_response_client.send_goal(goal)
 
                 #If goal has been canceled perform necessary shutdown behavior
                 self.node.preempted()
