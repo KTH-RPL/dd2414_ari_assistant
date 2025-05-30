@@ -30,6 +30,8 @@ class FaceRecognitionNode:
         self.target_name = None
         self.current_id = None
 
+        self.string_header = "[FACERECOGNITION]:"
+
         self._tf_Listener = TransformListener()
 
         self.ollama_response_client = actionlib.SimpleActionClient("/ollama_response",brain.BrainAction)
@@ -39,8 +41,6 @@ class FaceRecognitionNode:
         self.encodings_file = os.path.join(self.database_path, "face_database.json")
         os.makedirs(self.database_path, exist_ok=True)
         
-        # Load known faces from the file
-        self.known_faces = self.load_known_faces()
         
         # ROS subscribers
         self.name_pub = rospy.Publisher('/face_recognition/user_name', String, queue_size=1)
@@ -49,9 +49,11 @@ class FaceRecognitionNode:
         self.face_ids_sub = rospy.Subscriber("/humans/faces/tracked", IdsList, self.face_id_callback)
         self.face_images_subs = {}
         rospy.loginfo("[FACERECOGNITION]:Initialized")
-        self.string_header = "[FACERECOGNITION]:"
+        
 
         self.working_count = 0
+        # Load known faces from the file
+        self.known_faces = self.load_known_faces()
         
 
     def action(self,goal):
@@ -66,13 +68,13 @@ class FaceRecognitionNode:
 
             # If face not yet seen FAILURE, can not save name or search for name
             if self.current_id is None:
-                rospy.logwarn("[FACERECOGNITION]:No face detected to save.")
+                rospy.logwarn(f"{self.string_header} No face detected to save.")
                 result.result = "Failure"
                 return result
 
             # Save name if its not unknown
             if self.target_name != "unknown":
-                rospy.loginfo(f"[FACERECOGNITION]:Save name: {self.target_name}")
+                rospy.loginfo(f"{self.string_header} Save name: {self.target_name}")
                 self.add_name_to_face(self.target_name)
 
                 # Return name that was saved
@@ -81,7 +83,7 @@ class FaceRecognitionNode:
                 
 
             else:
-                rospy.logdebug(f"[FACERECOGNITION]:Name unknown. Searching if we already know it.")
+                rospy.logdebug(f"{self.string_header} Name unknown. Searching if we already know it.")
                 name = self.search_for_name()
 
                 # Return name if we know it
@@ -92,13 +94,13 @@ class FaceRecognitionNode:
                     #result.in_dic = json.dumps({"name" : "unknown" })
                     self.name_pub.publish(name)
                     
-                rospy.loginfo(f"[FACERECOGNITION]:Name: "+ str(name))
+                rospy.loginfo(f"{self.string_header} Name: "+ str(name))
                 self.ollama_response_client.send_goal(goal)
 
             result.result = "Success"
             rospy.logdebug(result)
         else:
-            rospy.logwarn("[FACERECOGNITION]:No goal provided.")
+            rospy.logwarn(f"{self.string_header} No goal provided.")
             result.result = "Failure"
         
         return result
@@ -112,15 +114,15 @@ class FaceRecognitionNode:
             with open(self.encodings_file, "r") as f:
                 try:
                     data = json.load(f)
-                    rospy.logdebug("[FACERECOGNITION]:Loaded face database successfully.")
+                    rospy.logdebug(f"{self.string_header} Loaded face database successfully.")
                     
                     data["encodings"] = {key: [np.array(encoding, dtype=np.float64) for encoding in encodings] 
                                      for key, encodings in data["encodings"].items()}
                     return data
                 except json.JSONDecodeError as e:
-                    rospy.logerr(f"Error decoding JSON: {e}")
+                    rospy.logerr(f"{self.string_header} Error decoding JSON: {e}")
         else:
-            rospy.logwarn(f"Face database file {self.encodings_file} does not exist.")
+            rospy.logwarn(f"{self.string_header} Face database file {self.encodings_file} does not exist.")
         return {"encodings": {}, "ids": [], "names": [], "coordinates": [], "room": [] }
 
 
@@ -140,9 +142,9 @@ class FaceRecognitionNode:
         try:
             with open(self.encodings_file, "w") as f:
                 json.dump(data, f, indent=4)
-            rospy.logdebug("[FACERECOGNITION]:Face data saved successfully.")
+            rospy.logdebug(f"{self.string_header} Face data saved successfully.")
         except Exception as e:
-            rospy.logerr(f"Error saving face data: {e}")
+            rospy.logerr(f"{self.string_header} Error saving face data: {e}")
 
         
     def face_id_callback(self, msg):
@@ -186,12 +188,12 @@ class FaceRecognitionNode:
                     match_id = self.find_matching_face(encoding)
                   
                 if match_id:
-                    rospy.logdebug(f"[FACERECOGNITION]:Recognized face {face_id} as {match_id}")
+                    rospy.logdebug(f"{self.string_header} Recognized face {face_id} as {match_id}")
                     self.current_id = match_id
                 else:
                     name = None
                     new_id = self.save_new_face(face_id, encoding, cv_image, name)
-                    rospy.loginfo(f"[FACERECOGNITION]:Saved new face {face_id} as {new_id} (Name: {name}).")
+                    rospy.loginfo(f"{self.string_header} Saved new face {face_id} as {new_id} (Name: {name}).")
                     self.current_id = new_id
                 
                 # Save latest known location
@@ -260,11 +262,11 @@ class FaceRecognitionNode:
                 index = self.known_faces["ids"].index(face_id)
                 self.known_faces["names"][index] = name
                 self.save_known_faces()
-                rospy.logdebug(f"[FACERECOGNITION]:Assigned name {name} to face ID {face_id}")
+                rospy.logdebug(f"{self.string_header} Assigned name {name} to face ID {face_id}")
             except ValueError:
-                rospy.logwarn("[FACERECOGNITION]:Face ID not found in known faces.")
+                rospy.logwarn(f"{self.string_header} Face ID not found in known faces.")
         else:
-            rospy.logwarn("[FACERECOGNITION]:No recognized face to assign a name.")
+            rospy.logwarn(f"{self.string_header} No recognized face to assign a name.")
 
 
     def add_location_to_face(self, temporal_face_id):
@@ -274,7 +276,7 @@ class FaceRecognitionNode:
             try:
                 index = self.known_faces["ids"].index(face_id)
             except ValueError:
-                rospy.logwarn("[FACERECOGNITION]:Face ID not found for location update.")
+                rospy.logwarn(f"{self.string_header} Face ID not found for location update.")
                 return
 
             faces = list(self.hri_listener.faces.values())
@@ -302,7 +304,7 @@ class FaceRecognitionNode:
                 self.save_known_faces()
 
         else:
-            rospy.logwarn("[FACERECOGNITION]:No recognized face to assign a location.")
+            rospy.logwarn(f"{self.string_header} No recognized face to assign a location.")
 
 
     
@@ -314,7 +316,7 @@ class FaceRecognitionNode:
             try:
                 index = self.known_faces["ids"].index(face_id)
             except ValueError:
-                rospy.logwarn("[FACERECOGNITION]:Face ID not found for location update.")
+                rospy.logwarn(f"{self.string_header} Face ID not found for location update.")
                 return
 
         # Obtain name
@@ -335,7 +337,7 @@ class FaceRecognitionNode:
         try:
             rospy.wait_for_service('/get_zoi', timeout=0.5)  # Wait half a second
         except rospy.ROSException as e:
-            rospy.logerr(f"[FACERECOGNITION]:Timeout waiting for service /get_zoi: {e}")
+            rospy.logerr(f"{self.string_header} Timeout waiting for service /get_zoi: {e}")
             return None
 
         try:
@@ -351,13 +353,13 @@ class FaceRecognitionNode:
             # Access the first zone of interest (zois is a list)
             if response.zois.zois:
                 zone_of_interest = response.zois.zois[0]  # Get the first ZoI string
-                rospy.logdebug(f"[FACERECOGNITION]:Zone of Interest: {zone_of_interest}")
+                rospy.logdebug(f"{self.string_header} Zone of Interest: {zone_of_interest}")
                 return zone_of_interest
             else:
                 return None
 
         except rospy.ServiceException as e:
-            rospy.logerr("[FACERECOGNITION]:Service call failed: %s" % e)
+            rospy.logerr(f"{self.string_header} Service call failed: %s" % e)
             return None
 
 

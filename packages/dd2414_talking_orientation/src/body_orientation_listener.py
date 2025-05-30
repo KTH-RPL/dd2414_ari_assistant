@@ -24,67 +24,6 @@ from pal_interaction_msgs.msg import TtsAction, TtsGoal
 from std_msgs.msg import String
 from ollama import Client
 
-"""
-
-class Listener(object):
-    def __init__(self):
-        self.listener_sub = rospy.Subscriber("/humans/voices/anonymous_speaker/speech",LiveSpeech,self.listener_result)
-        self.tts_client = SimpleActionClient("/tts",TtsAction)
-        self.tts_client.wait_for_server()
-        self.language = "en_US"
-        self.translate = False
-        self.api = Client(
-            host='http://192.168.0.106:11434',
-            headers={'x-some-header': 'some-value'}
-        )
-        self.system_prompt = "Translate a sentence. Return only the translation"
-        rospy.loginfo("Listening...")
-
-    def listener_result(self,msg):
-        sentence = msg.final
-        rospy.loginfo("Understood sentence: " + sentence)
-
-        if (sentence == "begin translation"):
-            ## MOVE CLOSE TO THE USER
-            self.tts_output("Begining translation")
-            self.translate == True
-
-        if self.translate:
-            self.translate_sentence(sentence)
-            self.translate = False
-
-    def tts_output(self,answer):
-        self.tts_client.cancel_goal()
-        goal = TtsGoal()
-        goal.rawtext.lang_id = self.language
-        goal.rawtext.text = str(answer)
-        self.tts_client.send_goal_and_wait(goal)
-
-    def translate_sentence(self,sentence):
-        model_ollama = "mistral:latest" #llama3.2:latest, mistral:latest, deepseek-r1:latest
-        try:
-            completion = self.api.chat(
-                model=model_ollama, 
-                messages=[
-                    {"role": "system", "content": self.system_prompt},
-                    {"role": "user", "content": "Translate the following sentence to Spanish: "+str(sentence)},
-                    ] 
-            )
-            response = completion.message.content
-            rospy.loginfo(f"DeepSeek Response: {response}")
-            self.tts_output(response)
-
-        except Exception as e:
-            rospy.logerr(f"Error generating response: {e}")
-            return "Sorry, I couldn't process your request."
-
-"""
-# Activar comportamiento con "Translate this conversation"
-# Mover hacia el sujeto identificado, el sujeto tiene que dar la instrucción mientras ve a ARI a los ojos
-# Rotar a ARI para que vea a la otra persona
-# Comenzar la traducción diciendo "begin translation"
-# Finalizar comportamiento con "end translation"
-
 
 class BodyOrientationListener:
 
@@ -135,6 +74,14 @@ class BodyOrientationListener:
         #Procedure in case the call gets cancelled
         pass
 
+    def normalize_quaternion(self, q):
+        norm = np.linalg.norm(q)
+        if norm == 0:
+            rospy.logwarn(f"{self.string_header} Quaternion has zero length, using default identity quaternion.")
+            return [0.0, 0.0, 0.0, 1.0]  # Identity quaternion
+        return [x / norm for x in q]
+
+
     def run(self):
         result_brain = brain.BrainResult()
         while not rospy.is_shutdown():
@@ -160,11 +107,15 @@ class BodyOrientationListener:
                 
                 try:
                     (left_trans, left_rot) = self._tf_Listener.lookupTransform("map","left_"+body[0],rospy.Time(0))
+                    left_rot = self.normalize_quaternion(left_rot) # Normalize
+                    
                     (right_trans, right_rot) = self._tf_Listener.lookupTransform("map","right_"+body[0],rospy.Time(0))
+                    right_rot = self.normalize_quaternion(right_rot)
+
                     transform_valid = True
                 except (LookupException, ConnectivityException, ExtrapolationException) as e:
                     rospy.logdebug(e)
-                    rospy.logdebug("[BODYORIENTATION]:Transform not published yet")
+                    rospy.logdebug(f"{self.string_header} Transform not published yet")
                     transform_valid = False
                     continue
 
@@ -191,12 +142,12 @@ class BodyOrientationListener:
                             result = self.nav_move_base(left_trans[0],left_trans[1],0,left_rot[0],left_rot[1],left_rot[2],left_rot[3])
 
                             if result == actionlib.GoalStatus.SUCCEEDED:
-                                rospy.logdebug("[BODYORIENTATION]:Arrived at target!")
+                                rospy.logdebug(f"{self.string_header} Arrived at target!")
                                 result_brain.result = "Success"
                                 return result_brain
                                 
                             else:
-                                rospy.logdebug("[BODYORIENTATION]:Trying right position!")
+                                rospy.logdebug(f"{self.string_header} Trying right position!")
                                 result = self.nav_move_base(right_trans[0],right_trans[1],0,right_rot[0],right_rot[1],right_rot[2],right_rot[3])
                                 if result == actionlib.GoalStatus.SUCCEEDED:
                                     result_brain.result = "Success"
@@ -205,7 +156,7 @@ class BodyOrientationListener:
                                     result_brain.result = "Failure"
                                     return result_brain
                         else:
-                            rospy.logdebug("[BODYORIENTATION]:Transform not available!")
+                            rospy.logdebug(f"{self.string_header} Transform not available!")
                             result_brain.result = "Working"
                             return result_brain
                         

@@ -87,7 +87,7 @@ class StatusUpdate(py_trees.behaviour.Behaviour):
             self._as.set_succeeded(self._result)
         else:
             self._result.result = "Failure"
-            rospy.loginfo("Action Server " + self._action_name + " Aborted.")
+            rospy.loginfo(f"{self.string_header} Action Server " + self._action_name + " Aborted.")
             self._as.set_aborted(self._result)
 
         self.rate.sleep()

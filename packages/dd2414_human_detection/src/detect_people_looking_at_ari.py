@@ -10,11 +10,7 @@ from geometry_msgs.msg import PointStamped
 
 class BodyOrientationListener:
 
-    def __init__(self,
-
-                base_frame = "head_front_camera_link",
-
-                 threshold=30):
+    def __init__(self, base_frame = "head_front_camera_link", threshold=30):
 
         self.hri_listener = pyhri.HRIListener()
         self.base_frame = base_frame
@@ -28,18 +24,6 @@ class BodyOrientationListener:
 
     def run(self):
 
-        """ The run function implement the main
-
-            functionality of the BodyOrientationListener
-
-            object, that is understanding which bodies
-
-            are oriented toward the robot. Here, the
-
-            base_frame specified during the object
-
-            initialisation represent the robot. """
-
         while not rospy.is_shutdown():
 
             bodies = self.hri_listener.bodies.items()
@@ -47,6 +31,7 @@ class BodyOrientationListener:
 
             for body in bodies:
 
+                # Calculate body's orientation
                 transform = body[1].transform(self.base_frame)
                 trans = transform.transform.translation
                 rot = transform.transform.rotation
@@ -60,23 +45,19 @@ class BodyOrientationListener:
                 b2r_xy_norm = np.linalg.norm([b2r_translation_x, b2r_translation_y], ord = 2)
                 
                 # Does the base frame lie inside the body frame-based cone of attention?
-
                 if np.arccos(b2r_translation_x/b2r_xy_norm) < (self.threshold/180*np.pi) and b2r_translation_x > 0:
 
                     bodies_facing_robot.append(body[0])
-                    #print("namespace: ", body[1].ns)
-                    #print("body: ", body[1])
                     self.id_pub.publish((body[0]))
             
+            # If there is a body looking at ari, publish to /person_looking_at_robot
             if(len(bodies_facing_robot) == 0):
                 self.id_pub.publish("")
-
 
             self.rate.sleep()
 
 
 if __name__=="__main__":
-
 
     rospy.init_node("body_orientation_listener",log_level=rospy.INFO)
     bol = BodyOrientationListener(threshold=20)

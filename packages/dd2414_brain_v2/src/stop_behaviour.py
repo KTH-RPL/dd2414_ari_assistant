@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 
+import json
+import actionlib
 import py_trees
 import py_trees_ros
 import rospy
+import dd2414_brain_v2.msg as brain
 from std_msgs.msg import String
 from std_msgs.msg import Bool
 
@@ -10,7 +13,7 @@ class StopBehaviour(py_trees.behaviour.Behaviour):
     def __init__(self, name: str, action_dict: dict):
 
         super(StopBehaviour, self).__init__(name=name)
-        
+
         self.blackboard = py_trees.blackboard.Blackboard()
         self.counter = 0
         self.action_dict = action_dict
@@ -25,13 +28,8 @@ class StopBehaviour(py_trees.behaviour.Behaviour):
         for action in self.action_dict:
             self.blackboard.set(action, False)
 
-        print("BLACKBOARD: ", self.blackboard)
-
         return py_trees.common.Status.SUCCESS
 
-        rospy.logdebug("%s.update()" % self.__class__.__name__)
-        self.feedback_message = "running"
-        return py_trees.common.Status.FAILURE
 
     def terminate(self, new_status: py_trees.common.Status):
 
@@ -41,6 +39,10 @@ class StopBehaviour(py_trees.behaviour.Behaviour):
                 "{}->{}".format(self.status, new_status) if self.status != new_status else "{}".format(new_status)
             )
         )
+
+    def input_cb(self, data):
+        rospy.loginfo(f"[STOP    ]: Behaviour received input {data}")
+        self.goal = data
 
 if __name__ == '__main__':
     

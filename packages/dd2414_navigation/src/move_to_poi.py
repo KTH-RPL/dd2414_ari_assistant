@@ -6,7 +6,7 @@ import actionlib
 from actionlib_msgs.msg import GoalID, GoalStatus, GoalStatusArray
 from dd2414_status_update import StatusUpdate
 from pal_navigation_msgs.msg import GoToPOIAction, GoToPOIGoal
-from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from move_base_msgs.msg import MoveBaseActionGoal, MoveBaseAction
 from visualization_msgs.msg import InteractiveMarkerInit
 import json
 import os
@@ -18,6 +18,7 @@ class MoveToPOI:
         self.string_header = "[MOVE_TO_POI    ]:"
         rospy.loginfo(self.string_header + "Initializing")
         self.poi_dict = {}
+        self.goal_id = ""
         self._ac_navigation = actionlib.SimpleActionClient('/poi_navigation_server/go_to_poi',GoToPOIAction)
         self.move_client = actionlib.SimpleActionClient('/move_base', MoveBaseAction)
         self.ollama_response_client = actionlib.SimpleActionClient("/ollama_response",brain.BrainAction)
@@ -38,9 +39,9 @@ class MoveToPOI:
                                         for key, encodings in data["encodings"].items()}
                     return data
                 except json.JSONDecodeError as e:
-                    rospy.logerr(f"Error decoding JSON: {e}")
+                    rospy.logerr(f"[MOVE_TO_POI    ]:Error decoding JSON: {e}")
         else:
-            rospy.logwarn(f"Face database file {self.encodings_file} does not exist.")
+            rospy.logwarn(f"[MOVE_TO_POI    ]:Face database file {self.encodings_file} does not exist.")
 
         return {"encodings": {}, "ids": [], "names": [], "coordinates": [], "room": []}
 
@@ -53,6 +54,8 @@ class MoveToPOI:
 
                 self._ac_navigation.wait_for_server(rospy.Duration(10))
                 self._ac_navigation.send_goal(meta)
+                #self.goal_id = self.goal_id_recieved
+
             
             #We ask for updates of the Action Server
             status = self._ac_navigation.get_state()
@@ -63,10 +66,13 @@ class MoveToPOI:
             rospy.logdebug(self.string_header +f"Result:{result}")
 
             if status == 3:
+                self.goal_id = ""
                 return "Success"
-            elif status == 0 or status == 1:
+
+            elif status == 0  or status == 1:
                 return "Working"
             else:
+                self.goal_id = ""
                 return "Failure"
 
     def action(self,goal):
