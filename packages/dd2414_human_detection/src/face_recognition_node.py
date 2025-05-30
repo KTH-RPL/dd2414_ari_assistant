@@ -161,8 +161,6 @@ class FaceRecognitionNode:
 
         
 
-
-
     def face_image_callback(self, msg, face_id):
         """Process the received aligned face image. Save it if it's a new one."""
         cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
