@@ -44,8 +44,6 @@ class FaceRecognitionNode:
         
         # ROS subscribers
         self.name_pub = rospy.Publisher('/face_recognition/user_name', String, queue_size=1)
-
-        # ROS subscribers
         self.face_ids_sub = rospy.Subscriber("/humans/faces/tracked", IdsList, self.face_id_callback)
         self.face_images_subs = {}
         rospy.loginfo("[FACERECOGNITION]:Initialized")
@@ -88,10 +86,8 @@ class FaceRecognitionNode:
 
                 # Return name if we know it
                 if name:
-                    #result.in_dic = json.dumps({"name" : name })
                     self.name_pub.publish(name)
                 else:
-                    #result.in_dic = json.dumps({"name" : "unknown" })
                     self.name_pub.publish(name)
                     
                 rospy.loginfo(f"{self.string_header} Name: "+ str(name))
@@ -365,11 +361,6 @@ class FaceRecognitionNode:
             rospy.logerr(f"{self.string_header} Service call failed: %s" % e)
             return None
 
-
-
-
-
-    
 
 
 if __name__ == '__main__':

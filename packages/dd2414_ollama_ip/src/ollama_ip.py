@@ -13,7 +13,7 @@ class OllamaIP:
 
     def run(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))  # No se envían datos realmente
+        s.connect(("8.8.8.8", 80))  
         self.llm_ip = str(s.getsockname()[0])
         msg = String()
         msg.data = self.llm_ip

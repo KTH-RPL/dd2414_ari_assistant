@@ -19,8 +19,8 @@ class STT:
         self.msg_data      = ""
         self.translator    = Translator()
         self.speaking      = False
+
         # Audio parameters – adjust according to your setup
-        #self.stt_listen   = False
         self.stt_filename = f"/tmp/ARI_stt.wav"
         self.SAMPLE_RATE  = 16000  # Hz
         self.SAMPLE_WIDTH = 2      # 2 bytes = 16-bit audio
@@ -60,16 +60,15 @@ class STT:
             wf.setnchannels(self.CHANNELS)
             wf.setsampwidth(self.SAMPLE_WIDTH)
             wf.setframerate(self.SAMPLE_RATE)
-            wf.writeframes(msg_data)  # msg.data is a bytes object
+            wf.writeframes(msg_data)  # msg_data is a bytes object
             wf.close
-        #rospy.loginfo(f"Saved audio to {self.stt_filename}")
+
         result       = self.stt_model.transcribe(self.stt_filename)
         stt_result   = result["text"]
         stt_language = result["language"]
 
         try:
             if stt_language != "en":
-                #result_translated = GoogleTranslator(source=stt_language, target='en').translate(stt_result)
                 result_translated = self.translator.translate(stt_result, src=stt_language, dest="en")
                 result_translated = result_translated.text
             else:
@@ -81,7 +80,7 @@ class STT:
             self.stt_pub.publish(json.dumps(transcript))
             rospy.loginfo(f"[STT            ]:Text:{stt_result}, Translation:{result_translated}, Language:{stt_language}")
         except:
-            rospy.logwarn("No Audio Detected")
+            rospy.logwarn("[STT            ]:No Audio Detected")
 
 if __name__ == '__main__':
     try:
@@ -89,7 +88,7 @@ if __name__ == '__main__':
         stt_node = STT()
         rospy.spin()
     except rospy.ROSInterruptException:
-        rospy.logerr("ROS Node interrupted.")
+        rospy.logerr("[STT            ]:ROS Node interrupted.")
         
 
 

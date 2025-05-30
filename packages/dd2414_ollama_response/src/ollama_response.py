@@ -16,7 +16,7 @@ from dd2414_status_update import StatusUpdate
 
 class OllamaResponse:
     def __init__(self):
-        self.api          = Client(host="http://localhost:11434")#Client(host="http://130.229.183.186:11434")
+        self.api          = Client(host="http://localhost:11434")
         self.model_ollama = "mistral:latest"
         self.languages    = {"en":"English","es":"Spanish","de":"German","fr":"French","sv":"Swedish","jp":"Japanese"}
         self.system_promt = "You are an office assistant robot called ARI. Be concise and helpful. "

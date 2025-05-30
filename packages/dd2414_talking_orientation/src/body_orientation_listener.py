@@ -60,8 +60,8 @@ class BodyOrientationListener:
         move_client.send_goal(goal)
         move_client.wait_for_result()
 
-        rospy.logdebug(f"[BODYORIENTATION]:Goal state:{move_client.get_state()}")
-        rospy.logdebug("[BODYORIENTATION]:"+move_client.get_goal_status_text())
+        rospy.logdebug(f"{self.string_header} Goal state:{move_client.get_state()}")
+        rospy.logdebug(self.string_header + move_client.get_goal_status_text())
         
         return move_client.get_state()
     
@@ -114,7 +114,7 @@ class BodyOrientationListener:
 
                     transform_valid = True
                 except (LookupException, ConnectivityException, ExtrapolationException) as e:
-                    rospy.logdebug(e)
+                    rospy.logdebug(self.string_header + e)
                     rospy.logdebug(f"{self.string_header} Transform not published yet")
                     transform_valid = False
                     continue
@@ -161,7 +161,7 @@ class BodyOrientationListener:
                             return result_brain
                         
                     except rospy.ROSInterruptException as e:
-                        rospy.loginfo(e)
+                        rospy.loginfo(self.string_header + e)
                         result_brain.result = "Working"
                         return result_brain
                         

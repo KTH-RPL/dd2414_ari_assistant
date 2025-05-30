@@ -55,7 +55,7 @@ if __name__ == '__main__':
     try:
         rospy.init_node("joy_convserion_node",log_level=rospy.INFO)
         node = JoyConversion()
-        rate = rospy.Rate(10) #10Hz
+        rate = rospy.Rate(10) # 10Hz
         while not rospy.is_shutdown():
             node.checJoystickTimeout()
             rate.sleep()

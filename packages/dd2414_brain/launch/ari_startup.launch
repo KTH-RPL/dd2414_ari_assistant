@@ -7,11 +7,10 @@
 
   <node name="move_to_poi" pkg="dd2414_navigation" type="move_to_poi.py"/>
 
-  <!-- <node name="text_speech" pkg="dd2414_text_speech" type="text_speech.py"/> --> <!-- This node we might not be running anymore-->
   <node name="face_recognition_node" pkg="dd2414_human_detection" type="face_recognition_node.py"/>
 
 
-  <node name="follow_user" pkg="dd2414_follow_user" type="follow_user_2.py"/>
+  <node name="follow_user" pkg="dd2414_follow_user" type="follow_user.py"/>
 
   <node name="body_orientation_listener" pkg="dd2414_talking_orientation" type="body_orientation_listener.py"/>
   <include file="$(find dd2414_speech)/find_speaker.launch" />
