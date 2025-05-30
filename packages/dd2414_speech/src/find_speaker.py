@@ -42,9 +42,8 @@ class FindSpeakerActionServer:
         self.string_header = "[FIND_SPEAKER   ]:"
         
     def action(self,goal):
-        rospy.loginfo("[FIND_SPEAKER   ]:Request to look at speaker received") #CHANGE
+        rospy.logdebug("[FIND_SPEAKER   ]:Request to look at speaker received")
         self.person_found = False
-        
         
         if(not self.finding_speaker_active):
             if(len(self.directions) > 0):
@@ -54,7 +53,7 @@ class FindSpeakerActionServer:
                 self.rotate_to(median_direction)
                 self.directions = []
                 
-            else:
+            else:  # If no directions have been recorded during previous speech
                 rospy.loginfo("[FIND_SPEAKER   ]:Previous speech could not be localized")
                 self.result.result = "Success"
         
@@ -72,11 +71,12 @@ class FindSpeakerActionServer:
         rospy.loginfo(f"[FIND_SPEAKER   ]:Sending request to rotate in direction {direction}")
         
         self.turning_to_speech = True
+
+        # Rotate in direction of the speech
         if direction >= 0 :
             rotation_rad = np.deg2rad(180+10)
         else:
             rotation_rad = np.deg2rad(180-10)
-        #rotation_rad = np.deg2rad(-2*direction)
 
         goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = "base_link"
@@ -89,8 +89,7 @@ class FindSpeakerActionServer:
         goal.target_pose.pose.orientation.w = quat[3]
 
         self.turning_goal = goal
-
-        self.move_base_client.send_goal(goal, done_cb=self.rotating_done_cb,)
+        self.move_base_client.send_goal(goal, done_cb=self.rotating_done_cb)
 
     def rotating_done_cb(self, state, result):
         self.turning_to_speech = False
@@ -98,7 +97,7 @@ class FindSpeakerActionServer:
         # Wait to see if body is found during or after rotation
         rospy.sleep(2)
         if(self.finding_speaker_active):
-            rospy.loginfo("[FIND_SPEAKER   ]:Finished turning towards speech, could not find body") #CHANGE
+            rospy.logdebug("[FIND_SPEAKER   ]:Finished turning towards speech, could not find body")
             self.result.result = "Failure"
             self.finding_speaker_active = False
 
@@ -118,7 +117,7 @@ class FindSpeakerActionServer:
             goal = MoveBaseGoal()
             body = self.hri_listener.bodies.get(data.data)
 
-            try:
+            try: # Turn towards person looking at ari
                 transform = body.transform("base_link").transform
 
                 target_x = transform.translation.x
@@ -140,10 +139,9 @@ class FindSpeakerActionServer:
 
                 self.turning_goal = goal
                 self.move_base_client.send_goal(goal)
-                #wait = self.move_base_client.wait_for_result()
                 rospy.logdebug("[FIND_SPEAKER   ]:Turning to found body")          
             except:
-                rospy.loginfo("[FIND_SPEAKER   ]:Could not transform body frame") #CHANGE
+                rospy.logdebug("[FIND_SPEAKER   ]:Could not transform body frame")
 
             return self.result
 
