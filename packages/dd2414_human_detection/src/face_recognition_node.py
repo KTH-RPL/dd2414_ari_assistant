@@ -352,8 +352,13 @@ class FaceRecognitionNode:
 
             # Access the first zone of interest (zois is a list)
             if response.zois.zois:
-                zone_of_interest = response.zois.zois[0]  # Get the first ZoI string
-                rospy.logdebug(f"{self.string_header} Zone of Interest: {zone_of_interest}")
+                for i in response.zois.zois:
+                    if "door_" in i:
+                        pass
+                    else:
+                        zone_of_interest = i  # Get the ZOI which is not a door
+                        rospy.logdebug(f"{self.string_header} Zone of Interest: {zone_of_interest}")
+                        break
                 return zone_of_interest
             else:
                 return None
