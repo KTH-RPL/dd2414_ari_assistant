@@ -10,6 +10,7 @@ class LookAtFace:
     def __init__(self):
 
         self.result = brain.BrainResult()
+
         # HRI Listener for face detection
         self.hri = pyhri.HRIListener()
 
@@ -23,6 +24,7 @@ class LookAtFace:
         rospy.loginfo("[LOOK_AT_PERSON ]:Initialized")
         self.string_header = "[LOOK_AT_PERSON ]:"
 
+    # When prompted, either start or stop looking at faces
     def action(self,goal):
         if(goal.goal == "start"):
             self.active = True
@@ -50,14 +52,14 @@ class LookAtFace:
         self.tick += 1
 
         faces = self.hri.faces
-        if self.active and len(faces) > 0 and list(faces.values())[-1].valid:  # Check if valid faces are detected
+
+        # Check if valid faces are detected
+        if self.active and len(faces) > 0 and list(faces.values())[-1].valid:
 
             self.tick = 0
-
             self.looking_ahead = False
 
             rospy.logdebug(f"[LOOK_AT_PERSON ]:Found faces {list(faces)}")
-            #rospy.loginfo(f"[LOOK_AT_PERSON ]:Found faces {list(faces)}")
 
             # Select last face
             face = list(faces.values())[-1]
@@ -75,17 +77,18 @@ class LookAtFace:
 
                 except Exception as e:
                     rospy.logwarn(f"[LOOK_AT_PERSON ]:Could not transform face position: {e}")
-                
+
+        # If no face has been detected for 2s, look forward 
         elif(self.tick > 20 and self.active):
             rospy.logdebug("[LOOK_AT_PERSON ]:No faces detected for 2s, looking forward")
-            #rospy.loginfo("[LOOK_AT_PERSON ]:No faces detected for 2s, looking forward")
             self.look_forward()
             self.tick = 0
 
+        # As soon as the face disappears out of view, publish a new goal (continue looking 
+        # the same direction), to prevent gaze-manager from crashing
         elif(not self.looking_ahead):
             if(self.active):
                 rospy.logdebug("[LOOK_AT_PERSON ]:No faces detected")
-                #rospy.loginfo("[LOOK_AT_PERSON ]:No faces detected")
                 target = PointStamped(point=Point(x=10, y=0, z=0))
                 target.header.frame_id = '/sellion_link'
 
@@ -102,11 +105,9 @@ class LookAtFace:
 
         self.look_at_pub.publish(target)
 
-
-
 if __name__ == '__main__':
-    rospy.init_node("face_gaze_tracker",log_level=rospy.WARN)
-    server = StatusUpdate(rospy.get_name(),LookAtFace)
+    rospy.init_node("face_gaze_tracker", log_level=rospy.WARN)
+    server = StatusUpdate(rospy.get_name(), LookAtFace)
 
     while not rospy.is_shutdown():
         server.node.trackFaces()
