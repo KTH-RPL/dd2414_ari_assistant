@@ -13,7 +13,6 @@
 
   <node name="follow_user" pkg="dd2414_follow_user" type="follow_user_2.py"/>
 
-  <node name="body_orientation_listener" pkg="dd2414_talking_orientation" type="body_orientation_listener.py"/>
   <include file="$(find dd2414_speech)/find_speaker.launch" />
 
 </launch>

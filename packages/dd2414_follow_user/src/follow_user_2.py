@@ -22,9 +22,11 @@ class ARIHeadFollower:
     def __init__(self):
         self.hri_listener = HRIListener()
         self.stop = False
+        self.running = False
         self.br    = tf_B()
         self._tf_Listener = TransformListener()
         self.string_header = "[FOLLOW_USER    ]:"
+
 
 
         # Publisher for head movement
@@ -32,7 +34,6 @@ class ARIHeadFollower:
         self.look_at_ac = actionlib.SimpleActionClient("/face_gaze_tracker",brain.BrainAction)
         self.look_at_goal = rospy.Publisher("/head_controller/point_head_action/goal",PointHeadActionGoal,queue_size=1)
 
-        self.asr_sub      = rospy.Subscriber('/humans/voices/anonymous_speaker/speech',LiveSpeech, self.asr_result)
 
         self.timeout = rospy.Duration(10)
 
@@ -40,70 +41,54 @@ class ARIHeadFollower:
 
         rospy.loginfo(f"{self.string_header} Initialized")
 
-    def asr_result(self,msg):
-        sentence = msg.final
-        rospy.logdebug(f"{self.string_header} Understood sentence: {sentence}")
-        
-        if sentence.lower() == "stop":
-            self.stop = True
-            rospy.loginfo(f"{self.string_header}Stoping Following behavior")
-            
-            # Cancel moving goals
-            self.move_client.cancel_all_goals()
             
     def action (self,goal):
         return self.track_user()
 
     def preempted(self):
-        self.stop = False
         self.move_client.cancel_all_goals()
-        rospy.loginfo(f"{self.string_header}Follow User Preempted returning None it Fails")
+        rospy.loginfo(f"{self.string_header}Stoping Following behavior")
         return
 
     def track_user(self):
         
         result = brain.BrainResult()
 
-        if not self.stop: #If its running or just started running
-            if len(self.hri_listener.bodies) > 0 : #Are there any bodies?
+        if len(self.hri_listener.bodies) > 0 : #Are there any bodies?
 
-                bodies = list(self.hri_listener.bodies.values())[0]
-                bodies.transform()
-                #Get the transform from ARI base_link to body
-                (t_bodies,r_bodies) = self._tf_Listener.lookupTransform("base_link",bodies.frame,rospy.Time(0))
-
-
-                T = bodies.transform()
-                trans = T.transform.translation
-
-                angle=math.atan2(trans.y,trans.x)*360/(2*math.pi) 
-                # Convert position to joint angles
-                if t_bodies[0] <= 1.5: #If the distanced traveled on X on the transform after the Rotation has been applied
-                    rospy.loginfo(f"{self.string_header}Close to User, Moving Head Only Distance: {t_bodies[0]} Angle: {angle}")
-                    #Turn Head towards the body
-                    #angle = self.turn_head(t_bodies)
-                    angle = self.turn_head_alt(bodies)
-                    if angle > 1.4: #If angle is greater turn to one side
-                        rospy.loginfo(f"{self.string_header}Close to User, Turning to the Left Distance: {t_bodies[0]} Angle: {angle}")
-                        facing = t.quaternion_from_euler(0,0,np.pi/2)
-                        self.nav_move_base(0,0,0,facing[0],facing[1],facing[2],facing[3])
-                    elif angle < -1.4: #Else if the angle is lesser turn to the other side 
-                        rospy.loginfo(f"{self.string_header}Close to User, Turning to the Right Distance: {t_bodies[0]} Angle: {angle}")
-                        facing = t.quaternion_from_euler(0,0,-np.pi/2)
-                        self.nav_move_base(0,0,0,facing[0],facing[1],facing[2],facing[3])
-                    #If not dont move the body
-                else:
-                    rospy.loginfo(f"{self.string_header}Far from user, approaching Distance: {t_bodies[0]}")
-                    #angle = self.turn_head_front()
-                    self.turn_head_front_alt()
-                    self.approach(t_bodies)
+            bodies = list(self.hri_listener.bodies.values())[0]
+            bodies.transform()
+            #Get the transform from ARI base_link to body
+            (t_bodies,r_bodies) = self._tf_Listener.lookupTransform("base_link",bodies.frame,rospy.Time(0))
 
 
-            result.result = "Working"
-        else:
-            self.stop = False
-            result.result = "Success"
-        
+            T = bodies.transform()
+            trans = T.transform.translation
+
+            angle=math.atan2(trans.y,trans.x)*360/(2*math.pi) 
+            # Convert position to joint angles
+            if t_bodies[0] <= 1: #If the distanced traveled on X on the transform after the Rotation has been applied
+                rospy.loginfo(f"{self.string_header}Close to User, Moving Head Only Distance: {t_bodies[0]} Angle: {angle}")
+                #Turn Head towards the body
+                #angle = self.turn_head(t_bodies)
+                angle = self.turn_head_alt(bodies)
+                if angle > 1.4: #If angle is greater turn to one side
+                    rospy.loginfo(f"{self.string_header}Close to User, Turning to the Left Distance: {t_bodies[0]} Angle: {angle}")
+                    facing = t.quaternion_from_euler(0,0,np.pi/2)
+                    self.nav_move_base(0,0,0,facing[0],facing[1],facing[2],facing[3])
+                elif angle < -1.4: #Else if the angle is lesser turn to the other side 
+                    rospy.loginfo(f"{self.string_header}Close to User, Turning to the Right Distance: {t_bodies[0]} Angle: {angle}")
+                    facing = t.quaternion_from_euler(0,0,-np.pi/2)
+                    self.nav_move_base(0,0,0,facing[0],facing[1],facing[2],facing[3])
+                #If not dont move the body
+            else:
+                rospy.loginfo(f"{self.string_header}Far from user, approaching Distance: {t_bodies[0]}")
+                #angle = self.turn_head_front()
+                self.turn_head_front_alt()
+                self.approach(t_bodies)
+
+
+        result.result = "Working"
         return result
     
     def turn_head_alt(self,body):

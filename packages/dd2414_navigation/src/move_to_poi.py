@@ -39,7 +39,7 @@ class MoveToPOI:
                                         for key, encodings in data["encodings"].items()}
                     return data
                 except json.JSONDecodeError as e:
-                    rospy.logerr(f"[MOVE_TO_POI    ]:Error decoding JSON: {e}")
+                    rospy.logerr(f"{self.string_header}Error decoding JSON: {e}")
         else:
             rospy.logwarn(f"[MOVE_TO_POI    ]:Face database file {self.encodings_file} does not exist.")
 

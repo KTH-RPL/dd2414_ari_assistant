@@ -104,7 +104,7 @@ class TranslateConversation:
                 return self.result
         
         except Exception as e:
-            rospy.logerr(f"Empty Goal: {e}")
+            rospy.logerr(f"{self.string_header}Empty Goal: {e}")
             self.result.result = "Failure"
             self.translate_pub.publish("")
 
