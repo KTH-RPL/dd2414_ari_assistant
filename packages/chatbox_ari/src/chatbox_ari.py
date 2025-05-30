@@ -219,7 +219,7 @@ class ChatboxARI:
         
         try:
             if self.data_dic != None and self.ari_speeking != "speaking" :
-                rospy.loginfo(self.data_dic)
+                #rospy.loginfo(self.data_dic)
                 self.data_dic = json.loads(self.data_dic)
                 #rospy.loginfo("Listen:",self.listen,"Process:",self.ready_to_process,"Data Dic:",self.data_dic)
             else:
@@ -379,7 +379,7 @@ if __name__ == '__main__':
 
     try:
         rospy.init_node("chatbox_ari",log_level=rospy.INFO)
-        rate =rospy.Rate(1)
+        rate =rospy.Rate(2)
         node=ChatboxARI()
         while not rospy.is_shutdown():
             node.run_stt()
