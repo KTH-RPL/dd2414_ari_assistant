@@ -69,8 +69,8 @@ class Brain:
         
         stop_behaviour = py_trees.Sequence(
             "Stop, look at person",
-            [StopBehaviour(name="stop behaviour", action_dict=self.namespace_dict), 
-             self.create_behaviour_from_action_server("stop"),
+            [self.create_behaviour_from_action_server("stop"),
+             StopBehaviour(name="stop behaviour", action_dict=self.namespace_dict), 
              look_at_face_behaviour]
         )
 

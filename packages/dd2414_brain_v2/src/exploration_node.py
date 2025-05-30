@@ -64,6 +64,7 @@ class ExploreBehaviour(py_trees.behaviour.Behaviour):
         
     def preempted(self):
         # Procedure in case the call gets cancelled
+        print("PREEMPTED EXPLORATION")
         self.client.cancel_all_goals()
         pass
         

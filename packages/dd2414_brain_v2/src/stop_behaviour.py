@@ -26,7 +26,10 @@ class StopBehaviour(py_trees.behaviour.Behaviour):
     def update(self) -> py_trees.common.Status:
 
         for action in self.action_dict:
-            self.blackboard.set(action, False)
+            if self.blackboard.get(action) == True and action != "stop:":
+                self.blackboard.set(action, False)
+
+        rospy.sleep(2)
 
         return py_trees.common.Status.SUCCESS
 
