@@ -22,9 +22,11 @@ class ARIHeadFollower:
     def __init__(self):
         self.hri_listener = HRIListener()
         self.stop = False
+        self.running = False
         self.br    = tf_B()
         self._tf_Listener = TransformListener()
         self.string_header = "[FOLLOW_USER    ]:"
+
 
 
         # Publisher for head movement
@@ -41,21 +43,24 @@ class ARIHeadFollower:
         rospy.loginfo(f"{self.string_header} Initialized")
 
     def asr_result(self,msg):
-        sentence = msg.final
-        rospy.logdebug(f"{self.string_header} Understood sentence: {sentence}")
-        
-        if sentence.lower() == "stop":
-            self.stop = True
-            rospy.loginfo(f"{self.string_header}Stoping Following behavior")
-            
-            # Cancel moving goals
-            self.move_client.cancel_all_goals()
+        if self.running:
+            sentence = msg.final
+            rospy.logdebug(f"{self.string_header} Understood sentence: {sentence}")
+
+            if sentence.lower() == "stop":
+                self.stop = True
+                rospy.loginfo(f"{self.string_header}Stoping Following behavior")
+
+                # Cancel moving goals
+                self.move_client.cancel_all_goals()
             
     def action (self,goal):
+        self.running = True
         return self.track_user()
 
     def preempted(self):
         self.stop = False
+        self.running = False
         self.move_client.cancel_all_goals()
         rospy.loginfo(f"{self.string_header}Follow User Preempted returning None it Fails")
         return
@@ -78,7 +83,7 @@ class ARIHeadFollower:
 
                 angle=math.atan2(trans.y,trans.x)*360/(2*math.pi) 
                 # Convert position to joint angles
-                if t_bodies[0] <= 1.5: #If the distanced traveled on X on the transform after the Rotation has been applied
+                if t_bodies[0] <= 1: #If the distanced traveled on X on the transform after the Rotation has been applied
                     rospy.loginfo(f"{self.string_header}Close to User, Moving Head Only Distance: {t_bodies[0]} Angle: {angle}")
                     #Turn Head towards the body
                     #angle = self.turn_head(t_bodies)
@@ -102,7 +107,9 @@ class ARIHeadFollower:
             result.result = "Working"
         else:
             self.stop = False
+            self.running = False
             result.result = "Success"
+            rospy.loginfo(f"{self.string_header} I shouldnt reach here")
         
         return result
     
