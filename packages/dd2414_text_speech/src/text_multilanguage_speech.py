@@ -31,7 +31,6 @@ class TextMultilanguageSpeech:
         rospy.loginfo("Text-to-Speech Multilanguage Action Server is running.")
 
     def tts_output(self,text):
-        #self.speek_pub.publish("speeking")
         self.talking ="speaking"
         self.speek_pub.publish(self.talking)
         goal                 = TtsGoal()
@@ -57,7 +56,6 @@ class TextMultilanguageSpeech:
                 self.tts_output(text_path)
             else:
                 # Now load into simpleaudio and play
-                #self.speek_pub.publish("speeking")
                 self.talking = "speaking"
                 self.speek_pub.publish(self.talking)
                 audio = AudioSegment.from_wav(text_path)

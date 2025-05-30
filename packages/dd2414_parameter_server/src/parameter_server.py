@@ -78,10 +78,8 @@ class ParamServer:
         for zoi in msg.zois:
             if "door_" in zoi:
                 self.currently_at_door = True
-#                rospy.loginfo("In Door ZOI")
                 return
             
-#        rospy.loginfo("Not In Door ZOI")
         self.currently_at_door = False
 
 if __name__ == "__main__":

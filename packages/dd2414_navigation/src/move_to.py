@@ -46,13 +46,7 @@ class MoveBase:
     def preempted(self):
         self.move_client.cancel_all_goals()
         pass
-    
-#    def cb_done (self,status,result):
-#        pass
-#    def cb_feedback(self,feedback):
-#        pass
-#    def cb_active(self):
-#        pass
+
     def nav_move_base(self,req_x, req_y):
         
         if(self.move_base_status != 0 and self.move_base_status != 1):

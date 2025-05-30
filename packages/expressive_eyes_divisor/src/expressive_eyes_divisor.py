@@ -19,8 +19,6 @@ class CompressedImageSplitter:
         self.bridge = CvBridge()
 
         # Publishers
-#        self.left_pub = rospy.Publisher(self.left_output_topic, Image, queue_size=1)
-#        self.right_pub = rospy.Publisher(self.right_output_topic, Image, queue_size=1)
         self.out_pub = rospy.Publisher(self.output_topic, Image, queue_size=1)
 
         # Subscriber
@@ -38,28 +36,16 @@ class CompressedImageSplitter:
             rospy.logwarn("Failed to decode image")
             return
 
-#        height, width, _ = cv_image.shape
-#        mid = width // 2
-
-        # Split image vertically
-#        left_image = cv_image[:, :mid]
-#        right_image = cv_image[:, mid:]
         all_image = cv_image
 
         # Convert to ROS Image messages
-#        left_msg = self.bridge.cv2_to_imgmsg(left_image, encoding="bgr8")
-#        right_msg = self.bridge.cv2_to_imgmsg(right_image, encoding="bgr8")
         all_msg = self.bridge.cv2_to_imgmsg(all_image, encoding="bgr8")
         
 
         # Copy header info
-#        left_msg.header = msg.header
-#        right_msg.header = msg.header
         all_msg.header = msg.header
 
         # Publish
-#        self.left_pub.publish(left_msg)
-#        self.right_pub.publish(right_msg)
         self.out_pub.publish(all_msg)
 
 if __name__ == '__main__':

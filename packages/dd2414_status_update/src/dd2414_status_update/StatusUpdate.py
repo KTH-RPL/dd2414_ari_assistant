@@ -36,13 +36,10 @@ class StatusUpdate(py_trees.behaviour.Behaviour):
     
     def execute_cb(self,goal):
 
-        #Insert Code for new GOAL SETUP HERE
-
-        ###################################
         rospy.loginfo(self.string_header + "Starting Execution of " + self._action_name)
         
         
-        self._result.result = "Working" #Variable to store the status
+        self._result.result = "Working" # Variable to store the status
 
         if(goal.goal != ''):
             self.goal = goal
@@ -58,7 +55,7 @@ class StatusUpdate(py_trees.behaviour.Behaviour):
 
         while(self._result.result == "Working" and not rospy.is_shutdown()):
 
-            #If a new goal has been sent, preempt to cancel current goal
+            # If a new goal has been sent, preempt to cancel current goal
             if(self.previous_goal != self.goal):
                 self.node.preempted()
                 self.previous_goal = self.goal
@@ -71,9 +68,8 @@ class StatusUpdate(py_trees.behaviour.Behaviour):
                 goal.in_dic = json.dumps({"intent":"stop","input":"","phrase":"Stopping","language":"en"})
                 self.ollama_response_client.send_goal(goal)
 
-                #If goal has been canceled perform necessary shutdown behavior
+                # If goal has been canceled perform necessary shutdown behavior
                 self.node.preempted()
-                ##################################################
                 self._result.result = "Failure"
                 self._as.set_preempted(self._result)
                 rospy.loginfo(self.string_header + "Goal Preempted.")

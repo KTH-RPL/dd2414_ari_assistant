@@ -7,7 +7,7 @@ from audio_common_msgs.msg import AudioData
 class SpeechText:
     def __init__(self):
         rospy.init_node('audio_saver')
-        rospy.loginfo("Audio saver node started. Listening for audio...")
+        rospy.loginfo("[Speech Text]: Audio saver node started. Listening for audio...")
         # Audio parameters – adjust according to your setup
         self.SAMPLE_RATE = 16000  # Hz
         self.SAMPLE_WIDTH = 2     # 2 bytes = 16-bit audio
@@ -29,7 +29,7 @@ class SpeechText:
             wf.setframerate(self.SAMPLE_RATE)
             wf.writeframes(msg.data)  # msg.data is a bytes object
 
-        rospy.loginfo(f"Saved audio to {filename}")
+        rospy.loginfo(f"[Speech Text]: Saved audio to {filename}")
 
 if __name__ == '__main__':
     try:
