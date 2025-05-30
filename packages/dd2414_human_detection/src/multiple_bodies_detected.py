@@ -12,6 +12,8 @@ class HumanDetectionNode:
     def __init__(self):
         rospy.init_node('human_detection_node', anonymous=True,log_level=rospy.INFO)
 
+        self.string_header = "[MULTIBODY      ]:"
+                             
         self.bridge = CvBridge()
         self.frame_counter = 0  # Add a frame counter
 
@@ -35,12 +37,7 @@ class HumanDetectionNode:
         return ''.join(random.choices(string.ascii_lowercase, k=length))
 
     def image_callback(self, msg):
-        #rospy.loginfo("Image arrives at time stamp: " + rospy.Time.now())
         self.frame_counter += 1
-
-        # Skip every 2nd frame (frame skipping)
-        #if self.frame_counter % 10 != 0:
-         #   return  # Skip this frame
 
         cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
         
@@ -49,7 +46,7 @@ class HumanDetectionNode:
 
         # Detect bodies in the resized image
         detected_bodies = self.detect_bodies(cv_image_resized)
-        rospy.loginfo(f"Raw detections: {detected_bodies}")
+        rospy.loginfo(f"{self.string_header} Raw detections: {detected_bodies}")
 
         # Prepare messages
         body_ids_msg = IdsList()
@@ -80,11 +77,10 @@ class HumanDetectionNode:
             cropped_msgs.append((body_id, cropped_msg))
 
         # Publish the list of detected body IDs
-        rospy.loginfo(f"Detected body IDs: {body_ids_msg.ids}")
+        rospy.loginfo(f"{self.string_header} Detected body IDs: {body_ids_msg.ids}")
         self.body_ids_pub.publish(body_ids_msg)
 
         # Publish ROIs and cropped images
-        #rospy.loginfo("Image arrives at time stamp: " + rospy.Time.now())
         self.publish_detections(roi_msgs, cropped_msgs)
 
     def publish_detections(self, roi_msgs, cropped_msgs):
@@ -101,7 +97,7 @@ class HumanDetectionNode:
             cropped_pub = rospy.Publisher(topic, Image, queue_size=10)
             cropped_pub.publish(cropped_msg)
 
-        rospy.loginfo("Published ROI and cropped images for detected bodies.")
+        rospy.loginfo(f"{self.string_header} Published ROI and cropped images for detected bodies.")
 
     def detect_bodies(self, image):
         """ Run YOLOv8 tracking and return detected bounding boxes with track IDs. """
@@ -110,12 +106,9 @@ class HumanDetectionNode:
         if results[0].boxes is not None:
             for box in results[0].boxes.data.tolist():
                 if len(box) >= 7:  # Ensure we have a track ID
-                    print(box)
                     x_min, y_min, x_max, y_max, track_id, conf, cls = box[:7]
                     x_min, y_min, x_max, y_max = map(int, [x_min, y_min, x_max, y_max])
 
-                    print(track_id)
-                    print(conf)
                     if conf > self.conf_threshold and int(cls) == 0:  # Class ID 0 is 'person'
                         detected_bodies.append((x_min, y_min, x_max, y_max, track_id))
         
