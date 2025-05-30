@@ -25,7 +25,7 @@ class OllamaResponse:
         self.voices       = {"es":"es-MX-DaliaNeural","de":"de-DE-KatjaNeural","fr":"fr-FR-DeniseNeural","jp":"ja-JP-NanamiNeural","sv":"sv-SE-SofieNeural"}
 
         self.person_name = "unknown"
-
+        self.string_header = "[Ollama Response]:"
         rospy.Subscriber("/face_recognition/user_name",String,self.update_name_person)
 
         # Action client of TTS Multilanguages
@@ -36,7 +36,7 @@ class OllamaResponse:
         self.wav_path = os.path.expanduser('/tmp/tts_audio_wav.wav')
         
         rospy.loginfo("[Ollama Response]:Initialized")
-        self.string_header = "[Ollama Response]:"
+        
 
     def update_name_person(self,msg):
         if not msg.data:
@@ -45,8 +45,8 @@ class OllamaResponse:
             self.person_name = msg.data
 
     def action(self,goal):
-        rospy.loginfo(goal)
         try:
+            rospy.loginfo(f"Executing {goal}")
             dictonary = json.loads(goal.in_dic)
             language  = dictonary["language"]
             intent    = dictonary["intent"]
@@ -61,7 +61,8 @@ class OllamaResponse:
             return self.result
 
     def preempted(self):
-        pass
+        rospy.logwarn("I am preempting myself")
+        return
 
     def tts_multilanguage_edge(self,text,language):
         rospy.loginfo("GTTS initializing")

@@ -138,7 +138,6 @@ class ChatboxARI:
             goal.rawtext.text    = text
             self.tts_client.send_goal_and_wait(goal)
             self.tts_client.wait_for_result()
-            rospy.sleep(1.7)
 
     def ari_translating_state(self,msg):
         self.ari_translating = msg.data

@@ -15,7 +15,7 @@ from pal_interaction_msgs.msg import TtsAction, TtsGoal
 
 class TextMultilanguageSpeech:
     def __init__(self):
-        self._as = SimpleActionServer('text_multilanguage_speech', tts.TextToSpeechMultilanguageAction, execute_cb=self.action_cb)
+        self._as = SimpleActionServer('text_multilanguage_speech', tts.TextToSpeechMultilanguageAction, execute_cb=self.action_cb,auto_start=False)
 
         self._as.start()  # Initialize ros service
 
@@ -38,6 +38,7 @@ class TextMultilanguageSpeech:
         goal.rawtext.lang_id = "en_US"
         goal.rawtext.text    = text
         self.tts_client.send_goal_and_wait(goal)
+        self.tts_client.cancel_all_goals()
 
     def run(self):
         self.speek_pub.publish(self.talking)
