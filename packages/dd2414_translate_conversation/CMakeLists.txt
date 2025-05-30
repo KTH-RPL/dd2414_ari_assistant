@@ -8,7 +8,7 @@ project(dd2414_translate_conversation)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  dd2414_brain_v2
+  dd2414_brain
   dd2414_status_update
   rospy
   std_msgs
@@ -106,7 +106,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES dd2414_translate_conversation
-  CATKIN_DEPENDS dd2414_brain_v2 dd2414_status_update rospy std_msgs
+  CATKIN_DEPENDS dd2414_brain dd2414_status_update rospy std_msgs
 #  DEPENDS system_lib
 )
 

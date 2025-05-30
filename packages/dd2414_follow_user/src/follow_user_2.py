@@ -5,7 +5,7 @@ import math
 import pyhri
 import actionlib
 import numpy as np
-import dd2414_brain_v2.msg as brain
+import dd2414_brain.msg as brain
 
 from tf import TransformListener
 from tf import transformations as t

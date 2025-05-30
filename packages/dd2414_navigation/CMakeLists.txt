@@ -8,7 +8,7 @@ project(dd2414_navigation)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-    dd2414_brain_v2
+    dd2414_brain
     actionlib
 )
 
@@ -106,7 +106,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES dd2214_navigation
-  CATKIN_DEPENDS dd2414_brain_v2
+  CATKIN_DEPENDS dd2414_brain
 #  DEPENDS system_lib
 )
 

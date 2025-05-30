@@ -3,7 +3,7 @@
 import rospy
 import actionlib
 from dd2414_status_update import StatusUpdate
-import dd2414_brain_v2.msg as brain
+import dd2414_brain.msg as brain
 from datetime import datetime
 import py_trees
 

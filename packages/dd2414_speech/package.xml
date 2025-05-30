@@ -43,8 +43,8 @@
 
   <depend>actionlib</depend>
   <depend>actionlib_msgs</depend>
-  <build_depend>dd2414_brain_v2</build_depend> 
-  <exec_depend>dd2414_brain_v2</exec_depend> 
+  <build_depend>dd2414_brain</build_depend> 
+  <exec_depend>dd2414_brain</exec_depend> 
 
 
   <!-- The export tag contains other, unspecified, tags -->

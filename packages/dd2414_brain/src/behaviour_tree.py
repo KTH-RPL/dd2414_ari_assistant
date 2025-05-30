@@ -9,7 +9,7 @@ from std_msgs.msg import String
 from stop_behaviour import StopBehaviour
 from exploration_node import ExploreBehaviour
 from rospy.exceptions import ROSException
-import dd2414_brain_v2.msg as brain
+import dd2414_brain.msg as brain
 
 import actionlib
 

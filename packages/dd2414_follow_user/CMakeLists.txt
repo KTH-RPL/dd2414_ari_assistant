@@ -19,7 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_ros
   control_msgs
   trajectory_msgs
-  dd2414_brain_v2
+  dd2414_brain
 )
 
 ## System dependencies are found with CMake's conventions
@@ -112,7 +112,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES dd2414_follow_user
-  CATKIN_DEPENDS actionlib actionlib_msgs geometry_msgs hri_msgs move_base_msgs pyhri rospy std_msgs tf tf2_ros trajectory_msgs control_msgs dd2414_brain_v2
+  CATKIN_DEPENDS actionlib actionlib_msgs geometry_msgs hri_msgs move_base_msgs pyhri rospy std_msgs tf tf2_ros trajectory_msgs control_msgs dd2414_brain
 #  DEPENDS system_lib
 )
 

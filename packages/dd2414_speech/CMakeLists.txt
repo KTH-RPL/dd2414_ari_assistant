@@ -9,11 +9,11 @@ project(dd2414_speech)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED
             COMPONENTS
-            dd2414_brain_v2
+            dd2414_brain
             actionlib)
 
 
-catkin_package(CATKIN_DEPENDS dd2414_brain_v2)
+catkin_package(CATKIN_DEPENDS dd2414_brain)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)

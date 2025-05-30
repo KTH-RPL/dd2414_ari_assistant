@@ -13,8 +13,9 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   tf
   hri_msgs
-  dd2414_brain_v2
+  dd2414_brain
   actionlib
+  audio_common_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -109,7 +110,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES dd2414_talking_orientation
-  CATKIN_DEPENDS geometry_msgs rospy std_msgs tf hri_msgs numpy pyhri dd2414_brain_v2
+  CATKIN_DEPENDS geometry_msgs rospy std_msgs tf hri_msgs numpy pyhri dd2414_brain 
 #  DEPENDS system_lib
 )
 

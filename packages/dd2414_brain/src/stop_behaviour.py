@@ -5,7 +5,7 @@ import actionlib
 import py_trees
 import py_trees_ros
 import rospy
-import dd2414_brain_v2.msg as brain
+import dd2414_brain.msg as brain
 from std_msgs.msg import String
 from std_msgs.msg import Bool
 

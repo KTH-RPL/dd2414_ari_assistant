@@ -14,7 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   rospy
   std_msgs
-  dd2414_brain_v2
+  dd2414_brain
 )
 
 ## System dependencies are found with CMake's conventions
@@ -110,7 +110,7 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES dd2414_text_speech
-  CATKIN_DEPENDS actionlib hri_msgs pal_interaction_msgs rospy std_msgs dd2414_brain_v2
+  CATKIN_DEPENDS actionlib hri_msgs pal_interaction_msgs rospy std_msgs dd2414_brain
 #  DEPENDS system_lib
 )
 
