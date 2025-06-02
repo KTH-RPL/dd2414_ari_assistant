@@ -322,6 +322,7 @@ play_obj.wait_done()
 This node allows for bidirectional translation (perfect for a conversation). The user indicates the target language they want to translate into, and the language in which the robot received the instruction is used as the source language. This node sends the phrases and the corresponding language to ollama\_response to generate the corresponding audio files.
 
 # Expressive Eyes Divisor
+This package publishes the image to the eyes so they gain movement.
 
 # Chatbox (LLM)
 
