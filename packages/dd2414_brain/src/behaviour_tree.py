@@ -70,13 +70,14 @@ class Brain:
         stop_behaviour = py_trees.Sequence(
             "Stop, look at person",
             [StopBehaviour(name="stop behaviour", action_dict=self.namespace_dict), 
+             look_at_face_behaviour,
              self.create_behaviour_from_action_server("stop"),
-             look_at_face_behaviour]
+             ]
         )
 
         translate_behaviour = py_trees.Sequence(
             "Find speaker, then move next to them and translate", 
-            [stop_look_at_face_behaviour,
+            [#stop_look_at_face_behaviour,
              #self.create_behaviour_from_action_server("find speaker"),
              #self.create_behaviour_from_action_server("move to translate"),
              self.create_behaviour_from_action_server("translate")])

@@ -64,7 +64,11 @@ class ExploreBehaviour(py_trees.behaviour.Behaviour):
         
     def preempted(self):
         # Procedure in case the call gets cancelled
+        self.room_index = 4
         self.client.cancel_all_goals()
+        rospy.sleep(0.5)
+        self.client.cancel_all_goals()
+        
         pass
         
     def get_prioritized_rooms(self):
