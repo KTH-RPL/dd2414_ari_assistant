@@ -125,3 +125,4 @@ To know how to use stt, review the section **Speech-to-Text** in [Usage & Tutori
 - make sure rviz is running
 - check camera’s and expressive\_eyes are running
 - make sure battery above 60%
+- Make sure she is localized
