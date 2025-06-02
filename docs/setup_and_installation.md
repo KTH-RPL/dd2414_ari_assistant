@@ -104,7 +104,7 @@ print(result.text)
 
 ## How to run the whole demo
 
-After following the setup of both the LLM and translate, in the package dd2414\_brain\_v2 is the launch file ari\_startup.launch which will need to be run inside ARI (SSH to ARI) to run all the nodes.
+After following the setup of both the LLM and translate, in the package dd2414\_brain is the launch file ari\_startup.launch which will need to be run inside ARI (SSH to ARI) to run all the nodes. Behaviour tree (`behaviour_tree.py`) needs to be running locally **AFTER** the nodes have been ran.
 
 The following nodes run individually in two different computers:
 
@@ -115,4 +115,13 @@ The following nodes run individually in two different computers:
 -   stt
 -   translate\_conversation
 
-To know how to use stt, review the section **Speech-to-Text** in[Usage & Tutorials](https://kth-dd2414-ari.atlassian.net/wiki/spaces/Documentat/pages/56754189/Usage+Tutorials)
+To know how to use stt, review the section **Speech-to-Text** in [Usage & Tutorials](https://github.com/KTH-RPL/dd2414_ari_assistant/blob/development/docs/usage_and_tutorials.md)
+
+### Checklist before executing
+
+- ollama\_response and chatbox running
+- speech-to-text and translate running, launch file on ARI running
+- behaviour\_tree running
+- make sure rviz is running
+- check camera’s and expressive\_eyes are running
+- make sure battery above 60%
